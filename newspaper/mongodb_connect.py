@@ -2,7 +2,7 @@ from pymongo import MongoClient
 import json
 
 # URI z danymi logowania i hostem (np. MongoDB Atlas)
-MONGO_URI = "mongodb+srv://user:jkYpB4hwWYBuQx4T@articles.cndzn.mongodb.net/"
+MONGO_URI = "URI"
 
 client = MongoClient(MONGO_URI)
 db = client["newspaper"]
