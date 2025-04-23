@@ -61,6 +61,13 @@ fetch('http://127.0.0.1:8000/articles')
             day: '2-digit'
         });
       } 
+      console.log('Artykuł:', {
+        geometry,
+        category,
+        source,
+        location,
+        articleDate
+      });
       
       process_geometry(geometry, category, source, location, article, articleDate);
     });
@@ -117,9 +124,11 @@ function style_popup(category, source, location, date, article) {
         <div class="popup-article">
             <a href="${article.url}" target="_blank"><h3 class="popup-article-title">${article.title}</h3></a>
             <div class="popup-article-info">
-                <p class="popup-article-category" style="background-color: ${color};">${category}</p>
-                <p class="popup-article-location">${location}</p>
-                <p class="popup-article-source">${source}</p>
+                <div class="popup-tags">
+                    <p class="popup-article-category" style="background-color: ${color};">${category}</p>
+                    <p class="popup-article-location">${location}</p>
+                    <p class="popup-article-source">${source}</p>
+                </div>
                 <p class="popup-article-date">${date}</p>
             </div>
             <p class = "popup-article-summary">${article.summary}</p>
@@ -166,22 +175,34 @@ const CategoryToggleControl = L.Control.extend({
 map.addControl(new CategoryToggleControl({ position: 'bottomright' }));
 
 // search bar
-document.getElementById("search-button").addEventListener("click", () => {
-    const query = document.getElementById("search-input").value;
-    if (!query) return;
-  
-    fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`)
-      .then(res => res.json())
-      .then(data => {
-        if (data && data[0]) {
-          const lat = parseFloat(data[0].lat);
-          const lon = parseFloat(data[0].lon);
-          map.setView([lat, lon], 12);
-        } else {
-          alert("Nie znaleziono lokalizacji");
-        }
-      });
-  });
+const searchInput = document.getElementById("search-input");
+const searchButton = document.getElementById("search-button");
+
+function handleSearch() {
+  const query = searchInput.value;
+  if (!query) return;
+
+  fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`)
+    .then(res => res.json())
+    .then(data => {
+      if (data && data[0]) {
+        const lat = parseFloat(data[0].lat);
+        const lon = parseFloat(data[0].lon);
+        map.setView([lat, lon], 12);
+      } else {
+        alert("Nie znaleziono lokalizacji");
+      }
+    });
+}
+
+searchButton.addEventListener("click", handleSearch);
+searchInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault(); 
+    handleSearch();
+  }
+});
+
 
 map.removeControl(map.zoomControl);
 
@@ -227,8 +248,14 @@ var overlays = {
     "Poligony": polygonLayer
 };
 
-L.control.layers(baseLayers, overlays).addTo(map);
+const layersControl = L.control.layers(baseLayers, overlays, { position: 'topright' });
+layersControl.addTo(map);
 
+// Teraz przeniesienie kontrolki do własnego kontenera
+const leafletLayersControl = document.querySelector(".leaflet-control-layers");
+const customContainer = document.getElementById("map-buttons");
 
-  
+if (leafletLayersControl && customContainer) {
+  customContainer.appendChild(leafletLayersControl);
+}
 
