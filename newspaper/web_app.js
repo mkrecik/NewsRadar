@@ -1,26 +1,25 @@
-var map = L.map('map').setView([52.237049, 21.017532], 13);
+var map = L.map('map').setView([52.237049, 21.017532], 9);
 L.tileLayer('https://api.maptiler.com/maps/winter-v2/{z}/{x}/{y}.png?key=h7HjjXDoOt4QndexKLba', {
     attribution: '<a href="https://www.maptiler.com/copyright/" target="_blank">&copy; MapTiler</a> <a href="https://www.openstreetmap.org/copyright" target="_blank">&copy; OpenStreetMap contributors</a>'
-
 }).addTo(map);
 
 const categoryIcons = {
-    "Wydarzenia": L.icon({ iconUrl: 'images/wydarzenia_icon.png', iconSize: [16, 16], iconAnchor: [8, 8], popupAnchor: [0, -16] }),
-    "Polityka": L.icon({ iconUrl: 'images/polityka_icon.png', iconSize: [16, 16], iconAnchor: [8, 8], popupAnchor: [0,-16] }),
-    "Sport": L.icon({ iconUrl: 'images/sport_icon.png', iconSize: [16, 16], iconAnchor: [8, 8], popupAnchor: [0, -16] }),
-    "Kultura": L.icon({ iconUrl: 'images/kultura_icon.png', iconSize: [16, 16], iconAnchor: [8, 8], popupAnchor: [0, -16] }),
-    "Pogoda": L.icon({ iconUrl: 'images/pogoda_icon.png', iconSize: [16, 16], iconAnchor: [8, 8], popupAnchor: [0, -16] }),
-    "Gospodarka": L.icon({ iconUrl: 'images/gospodarka_icon.png', iconSize: [16, 16], iconAnchor: [8, 8], popupAnchor: [0, -16] }),
-    "Inne": L.icon({ iconUrl: 'images/inne_icon.png', iconSize: [16, 16], iconAnchor: [8, 8], popupAnchor: [0, -16] })
+    "Wydarzenia": L.icon({ iconUrl: 'icons/wydarzenia.svg'}),
+    "Polityka": L.icon({ iconUrl: 'icons/polityka.svg'}),
+    "Gospodarka": L.icon({ iconUrl: 'icons/gospodarka.svg'}),
+    "Kultura": L.icon({ iconUrl: 'icons/kultura.svg'}),
+    "Sport": L.icon({ iconUrl: 'icons/sport.svg'}),
+    "Pogoda": L.icon({ iconUrl: 'icons/pogoda.svg'}),
+    "Inne": L.icon({ iconUrl: 'icons/inne.svg'})
   };
 
 const categoryColors = {
     "Wydarzenia": "#660001",
     "Polityka": "#990001",
+    "Gospodarka": "#CC0002",
     "Sport": "#0D5F8C",
     "Kultura": "#4E8CB0",
     "Pogoda": "#00314C",
-    "Gospodarka": "#CC0002",
   };
 
 const categoryLayers = {
@@ -43,6 +42,17 @@ fetch('http://127.0.0.1:8000/articles')
     data.forEach(article => {
       const geometry = article.geocode_result?.geometry;
       const category = article.category;
+      const src = article.source;
+      const source = src.replace(/^https?:\/\//, "");
+      const address = article.geocode_result.address;
+      const location =
+        address.city ||
+        address.town ||
+        address.administrative ||
+        address.state ||
+        address.village ||
+        address.country;
+      
       let articleDate = "";
       if (article.date) {
         articleDate = new Date(article.date).toLocaleDateString('pl-PL', {
@@ -52,22 +62,30 @@ fetch('http://127.0.0.1:8000/articles')
         });
       } 
       
-      process_geometry(geometry, category, article, articleDate);
+      process_geometry(geometry, category, source, location, article, articleDate);
     });
   })
   .catch(error => console.error('Błąd podczas ładowania artykułów:', error));
 
 
-function process_geometry(geometry, category, article, date) {
+function process_geometry(geometry, category, source, location, article, date) {
     if (!geometry) return;
 
     const icon = getIconForCategory(category); 
 
     if (geometry.type === "Point") {
         const [lon, lat] = geometry.coordinates;
-        const marker = L.marker([lat, lon], { icon: icon }).addTo(markerLayer);
+        const color = categoryColors[category] || "#000";
+        const marker = L.circleMarker([lat, lon], {
+        radius: 5,
+        color: color,
+        fillColor: color,
+        fillOpacity: 0.8,
+        weight: 1
+        }).addTo(markerLayer);
+
         categoryLayers[category]?.addLayer(marker);
-        marker.bindPopup(style_popup(category, date, article));
+        marker.bindPopup(style_popup(category, source, location, date, article));
     }
 
     if (geometry.type === "Polygon" || geometry.type === "MultiPolygon") {
@@ -83,30 +101,33 @@ function process_geometry(geometry, category, article, date) {
                 weight: 2
             }
         ).addTo(polygonLayer);
-        polygon.bindPopup(style_popup(category, date, article));
+        polygon.bindPopup(style_popup(category, source, location, date, article));
         categoryLayers[category]?.addLayer(polygon);
     }
     
 }
 
 function getIconForCategory(category) {
-    return categoryIcons[category] || L.icon({ iconUrl: 'path/to/default_icon.png', iconSize: [32, 32], iconAnchor: [16, 32], popupAnchor: [0, -32] });
+    return categoryIcons[category] || L.icon({ iconUrl: 'path/to/default.svg', iconSize: [32, 32], iconAnchor: [16, 32], popupAnchor: [0, -32] });
 }
 
-function style_popup(category, date, article) {
+function style_popup(category, source, location, date, article) {
     const color = categoryColors[category] || "#000000";
     return `
         <div class="popup-article">
             <a href="${article.url}" target="_blank"><h3 class="popup-article-title">${article.title}</h3></a>
             <div class="popup-article-info">
                 <p class="popup-article-category" style="background-color: ${color};">${category}</p>
-                <p>${date}</p>
+                <p class="popup-article-location">${location}</p>
+                <p class="popup-article-source">${source}</p>
+                <p class="popup-article-date">${date}</p>
             </div>
-            <p>${article.summary}</p>
+            <p class = "popup-article-summary">${article.summary}</p>
         </div>
     `;
 }
 
+// control cateogry layers
 Object.values(categoryLayers).forEach(layer => layer.addTo(map));
 const CategoryToggleControl = L.Control.extend({
     onAdd: function(map) {
@@ -114,7 +135,10 @@ const CategoryToggleControl = L.Control.extend({
 
         Object.keys(categoryIcons).forEach(category => {
             const btn = L.DomUtil.create('div', 'category-toggle-btn', div);
-            btn.innerHTML = `<img src="${categoryIcons[category].options.iconUrl}" title="${category}" alt="${category}"><span>${category}</span>`;
+            const color = categoryColors[category] || "#000";
+            btn.innerHTML = `<span>${category}</span><img src="${categoryIcons[category].options.iconUrl}" title="${category}" alt="${category}">`;
+            btn.style.backgroundColor = color;
+            
             btn.dataset.category = category;
             btn.classList.add('active');
 
@@ -125,10 +149,13 @@ const CategoryToggleControl = L.Control.extend({
                 if (isActive) {
                     map.removeLayer(categoryLayers[cat]);
                     this.classList.remove('active');
+                    this.classList.add('inactive');
                 } else {
                     map.addLayer(categoryLayers[cat]);
                     this.classList.add('active');
+                    this.classList.remove('inactive');
                 }
+                
             };
         });
 
@@ -138,14 +165,60 @@ const CategoryToggleControl = L.Control.extend({
 
 map.addControl(new CategoryToggleControl({ position: 'bottomright' }));
 
+// search bar
+document.getElementById("search-button").addEventListener("click", () => {
+    const query = document.getElementById("search-input").value;
+    if (!query) return;
+  
+    fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && data[0]) {
+          const lat = parseFloat(data[0].lat);
+          const lon = parseFloat(data[0].lon);
+          map.setView([lat, lon], 12);
+        } else {
+          alert("Nie znaleziono lokalizacji");
+        }
+      });
+  });
+
+map.removeControl(map.zoomControl);
+
+
+const CustomZoomControl = L.Control.extend({
+    onAdd: function (map) {
+        const container = L.DomUtil.create('div', 'custom-zoom-container');
+
+        const zoomIn = L.DomUtil.create('button', 'zoom-btn zoom-in', container);
+        const zoomOut = L.DomUtil.create('button', 'zoom-btn zoom-out', container);
+
+        L.DomEvent.on(zoomIn, 'click', function (e) {
+        e.stopPropagation();
+        map.zoomIn();
+        });
+
+        L.DomEvent.on(zoomOut, 'click', function (e) {
+        e.stopPropagation();
+        map.zoomOut();
+        });
+
+        return container;
+    },
+    onRemove: function () {}
+});
+
+map.addControl(new CustomZoomControl({ position: 'bottomleft' }));
+
+
 var baseLayers = {
     "MapTiler": L.tileLayer('https://api.maptiler.com/maps/winter-v2/{z}/{x}/{y}.png?key=h7HjjXDoOt4QndexKLba', {
-        maxZoom: 19,
-        attribution: '&copy; <a href="https://www.maptiler.com/copyright/" target="_blank">MapTiler</a> &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>'
+        maxZoom: 19
+        // attribution: '&copy; <a href="https://www.maptiler.com/copyright/" target="_blank">MapTiler</a> &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>'
     }).addTo(map),
     "OpenStreetMap": L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        maxZoom: 19
+        // attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
     })
 };
 
@@ -155,3 +228,7 @@ var overlays = {
 };
 
 L.control.layers(baseLayers, overlays).addTo(map);
+
+
+  
+

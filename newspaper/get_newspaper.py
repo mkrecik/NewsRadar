@@ -1,5 +1,4 @@
 from newspaper import Article, build
-import spacy
 import json
 import time
 import requests
@@ -73,7 +72,7 @@ def get_category(url):
 
 def extract_location_mistral(text):
     data = {
-        "model": "mistralai/mistral-small-3.1-24b-instruct:free",
+        "model": "microsoft/mai-ds-r1:free",
         "messages": [
             {
                 "role": "system",
@@ -90,7 +89,7 @@ def extract_location_mistral(text):
             },
             {"role": "user", "content": text.strip()}
         ],
-        "max_tokens": 50,
+        "max_tokens": 100,
         "temperature": 0.3
     }
 
@@ -151,8 +150,6 @@ def extract_pub_date(soup):
 
     return None
 
-import requests
-
 def geocode(query):
     url = "https://nominatim.openstreetmap.org/search"
     params = {
@@ -200,10 +197,15 @@ def geocode(query):
 
 
 def process_articles(site, whitelist):
-    article_urls = get_aricles_urls(site, whitelist)
+    # article_urls = get_aricles_urls(site, whitelist)
+    # # dump article_urls to json
+    # with open(r"article/interia_linki.json", "w", encoding="utf-8") as f:
+    #     json.dump(article_urls, f, ensure_ascii=False, indent=4)
+    
+    article_urls = json.load(open(r"article/interia_linki2304.json", "r", encoding="utf-8"))
 
     articles_data = []
-    for i, article_url in enumerate(article_urls[100:120]):
+    for i, article_url in enumerate(article_urls[:150]):
         try:
             print(f"[{i+1}/{len(article_urls)}] Processing: {article_url}")
 
@@ -263,9 +265,9 @@ if __name__ == "__main__":
     articles_data = process_articles(site, whitelist)
 
     # Save articles to json
-    with open(r"article/interia_mistral1404_3.json", "w", encoding="utf-8") as f:
-        json.dump(articles_data, f, ensure_ascii=False, indent=4)
-    print(f"Saved to json.")
+    # with open(r"article/interia_mistral1404_3.json", "w", encoding="utf-8") as f:
+    #     json.dump(articles_data, f, ensure_ascii=False, indent=4)
+    # print(f"Saved to json.")
 
     # TO USUWA CAŁĄ BAZĘ ARTYKUŁÓW!!!!
     # collection.delete_many({})  
