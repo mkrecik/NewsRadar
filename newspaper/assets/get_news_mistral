@@ -1,0 +1,56 @@
+from openai import OpenAI
+import json
+import os
+import requests
+
+
+headers = {
+    "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+    "Content-Type": "application/json",
+    "HTTP-Referer": "localhost",
+    "X-Title": "NewsRadar",
+}
+
+def extract_location_mistral(text):
+    data = {
+        "model": "mistral-small-3.1-24b-instruct:free",
+        "messages": [
+            {
+                "role": "system",
+                "content": (
+                    "Z tekstu wyodrębnij najdokładniejszą lokalizację - miejsce wydarzenia artykułu."
+                    "(np. budynek, ulica, miasto, kraj). Jeżeli da się to dostać z kontekstu dopisz jak najbardziej szczegółową lokalizacjęm czyli"
+                    "dodaj miasto, państwo, jednostkę administracyjną, ale najlepiej żeby była ona w oryginalnej nazwie dopasowanej pod język danego kraju. "
+                    "Zwróć tylko lokalizację, bez cytowania lub komentarzy. "
+                    "Jeśli znajdziesz więcej niż jedną lokalizację to zdecyduj która jest najważniejsza i najdokładniejsza "
+                    "i w której rzeczywiście coś się wydarzyło i czy dotyczy głównego tematu artykułu."
+                    "Jeśli nie da się przypisać lokalizacji,"
+                    "napisz: brak \n\n"
+                )
+            },
+            {"role": "user", "content": text.strip()}
+        ],
+        "max_tokens": 100,
+        "temperature": 0.3
+    }
+
+    try:
+        response = requests.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers=headers,
+            data=json.dumps(data),
+            timeout=10
+        )
+        response.raise_for_status()
+        result = response.json()
+
+        if 'choices' not in response:
+            print("Błąd: brak 'choices'. Odpowiedź:", response)
+            return None
+
+        return result["choices"][0]["message"]["content"]
+
+    except (requests.exceptions.RequestException, KeyError, ValueError) as e:
+        print("Błąd w extract_location:", e)
+        return "brak"
+
