@@ -1,4 +1,4 @@
-var map = L.map('map').setView([52.237049, 21.017532], 9);
+var map = L.map('map').setView([52.237049, 21.017532], 7);
 L.tileLayer('https://api.maptiler.com/maps/winter-v2/{z}/{x}/{y}.png?key=h7HjjXDoOt4QndexKLba', {
     attribution: '<a href="https://www.maptiler.com/copyright/" target="_blank">&copy; MapTiler</a> <a href="https://www.openstreetmap.org/copyright" target="_blank">&copy; OpenStreetMap contributors</a>'
 }).addTo(map);
@@ -34,6 +34,7 @@ const categoryLayers = {
 
 const markerLayer = L.layerGroup().addTo(map);
 const polygonLayer = L.layerGroup().addTo(map);
+const centroidLayer = L.layerGroup().addTo(map);
 
 // pobranie danych z backendu
 fetch('http://127.0.0.1:8000/articles')
@@ -51,7 +52,8 @@ fetch('http://127.0.0.1:8000/articles')
         address.administrative ||
         address.state ||
         address.village ||
-        address.country;
+        address.country ||
+        address.continent;
       
       let articleDate = "";
       if (article.date) {
@@ -71,8 +73,6 @@ fetch('http://127.0.0.1:8000/articles')
 function process_geometry(geometry, category, source, location, article, date) {
     if (!geometry) return;
 
-    const icon = getIconForCategory(category); 
-
     if (geometry.type === "Point") {
         const [lon, lat] = geometry.coordinates;
         const color = categoryColors[category] || "#000";
@@ -83,7 +83,6 @@ function process_geometry(geometry, category, source, location, article, date) {
         fillOpacity: 0.8,
         weight: 1
         }).addTo(markerLayer);
-
         categoryLayers[category]?.addLayer(marker);
         marker.bindPopup(style_popup(category, source, location, date, article));
     }
@@ -104,11 +103,23 @@ function process_geometry(geometry, category, source, location, article, date) {
         polygon.bindPopup(style_popup(category, source, location, date, article));
         categoryLayers[category]?.addLayer(polygon);
     }
-    
-}
 
-function getIconForCategory(category) {
-    return categoryIcons[category] || L.icon({ iconUrl: 'path/to/default.svg', iconSize: [32, 32], iconAnchor: [16, 32], popupAnchor: [0, -32] });
+    // polygon centroids
+    if (geometry.type === "Polygon" || geometry.type === "MultiPolygon") {
+        const center = article.geocode_result?.center;
+        if (center) {
+            const color = categoryColors[category] || "#000000";
+            const marker = L.circleMarker([center.lat, center.lon], {
+                radius: 5,
+                color: color,
+                fillColor: color,
+                fillOpacity: 0.8,
+                weight: 1
+            }).addTo(centroidLayer);
+            categoryLayers[category]?.addLayer(marker);
+            marker.bindPopup(style_popup(category, source, location, date, article));
+        }
+    }    
 }
 
 function style_popup(category, source, location, date, article) {
@@ -127,7 +138,7 @@ function style_popup(category, source, location, date, article) {
     `;
 }
 
-// control cateogry layers
+// control category layers
 Object.values(categoryLayers).forEach(layer => layer.addTo(map));
 const CategoryToggleControl = L.Control.extend({
     onAdd: function(map) {
@@ -224,7 +235,8 @@ var baseLayers = {
 
 var overlays = {
     "Punkty": markerLayer,
-    "Poligony": polygonLayer
+    "Poligony": polygonLayer,
+    "Centroidy": centroidLayer,
 };
 
 L.control.layers(baseLayers, overlays).addTo(map);

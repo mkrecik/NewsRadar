@@ -5,31 +5,35 @@ import requests
 from bs4 import BeautifulSoup
 from dateutil.parser import parse as date_parse 
 from pymongo import MongoClient
-import json
 from transformers import AutoTokenizer, AutoModelForTokenClassification, pipeline
 import torch
 import numpy as np
 from openai import OpenAI
+from datetime import datetime
+
+from api import MONGO_URI, OPENROUTER_API_KEY
 
 # pip install transformers torch json time requests beautifulsoup4 pymongo python-dateutil spacy newspaper3k lxml[html_clean] protobuf tiktoken
 # python -m spacy download pl_core_news_lg
 
 ### baza danych
-MONGO_URI = ""
+# MONGO_URI = ""
 
-client = MongoClient(MONGO_URI)
-db = client["newspaper"]
+db_client = MongoClient(MONGO_URI)
+db = db_client["newspaper"]
 collection = db["articles"]
 
 ### geoextracting model
-OPENROUTER_API_KEY = ""
+# OPENROUTER_API_KEY = ""
+ai_client = OpenAI(
+    base_url="https://openrouter.ai/api/v1",
+    api_key=OPENROUTER_API_KEY,
+)
 
-headers = {
-    "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-    "Content-Type": "application/json",
-    "HTTP-Referer": "localhost",
-    "X-Title": "NewsRadar",
-}
+model_mistral = "mistralai/mistral-small-3.1-24b-instruct"
+model_mistral_free = "mistralai/mistral-small-3.1-24b-instruct:free"
+model_gemini = "google/gemini-2.0-flash-001"
+model_gpt = "openai/gpt-4.1"
 
 site = 'https://www.interia.pl/'
 
@@ -63,56 +67,45 @@ categories_dict = {
                     "https://tygodnik.interia.pl"]
 }
 
-
 def get_category(url):
     for category, keywords in categories_dict.items():
         if any(keyword in url for keyword in keywords):
             return category
     return "Inne"
 
-def extract_location_mistral(text):
-    data = {
-        "model": "microsoft/mai-ds-r1:free",
-        "messages": [
-            {
-                "role": "system",
-                "content": (
+
+def extract_location(text, model = model_gemini):
+    try:
+        completion = ai_client.chat.completions.create(
+            model=model,
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
                     "Z tekstu wyodrębnij najdokładniejszą lokalizację - miejsce wydarzenia artykułu."
-                    "(np. budynek, ulica, miasto, kraj). Jeżeli da się to dostać z kontekstu dopisz jak najbardziej szczegółową lokalizacjęm czyli"
-                    "dodaj miasto, państwo, jednostkę administracyjną, ale najlepiej żeby była ona w oryginalnej nazwie dopasowanej pod język danego kraju. "
-                    "Zwróć tylko lokalizację, bez cytowania lub komentarzy. "
+                    "(np. budynek lub obiekt, pełny adres lub jeżeli nie ma dodkładnego miejsca -  miejscowość, stan lub kraj) w oryginalnej nazwie. "
+                    "Zwróć TYLKO lokalizację, bez cytowania lub komentarzy. "
                     "Jeśli znajdziesz więcej niż jedną lokalizację to zdecyduj która jest najważniejsza i najdokładniejsza "
                     "i w której rzeczywiście coś się wydarzyło i czy dotyczy głównego tematu artykułu."
-                    "Jeśli nie da się przypisać lokalizacji,"
-                    "napisz: brak \n\n"
-                )
-            },
-            {"role": "user", "content": text.strip()}
-        ],
-        "max_tokens": 100,
-        "temperature": 0.3
-    }
-
-    try:
-        response = requests.post(
-            "https://openrouter.ai/api/v1/chat/completions",
-            headers=headers,
-            data=json.dumps(data),
-            timeout=10
+                    "Jeśli nie da się przypisać lokalizacji, napisz tylko 'brak'. \n\n"
+                    )
+                },
+                {
+                    "role": "user",
+                    "content": text.strip()
+                }
+            ],
+            extra_headers={
+                "HTTP-Referer": "http://localhost",
+                "X-Title": "NewsRadar"
+            }
         )
-        response.raise_for_status()
-        result = response.json()
+        return completion.choices[0].message.content.strip()
 
-        if 'choices' not in response:
-            print("Błąd: brak 'choices'. Odpowiedź:", response)
-            return None
-
-        return result["choices"][0]["message"]["content"]
-
-    except (requests.exceptions.RequestException, KeyError, ValueError) as e:
+    except Exception as e:
         print("Błąd w extract_location:", e)
         return "brak"
-    
+
 def get_aricles_urls(site, whitelist):
     article_urls = []
 
@@ -148,7 +141,42 @@ def extract_pub_date(soup):
         except Exception as e:
             print("Błąd parsowania daty z <meta>:", e)
 
-    return None
+    return datetime.now()
+
+def geocode_points(query):
+    url = "https://nominatim.openstreetmap.org/search"
+    params = {
+        'q': query,
+        'format': 'json',
+        'limit': 1,
+        'polygon_geojson': 1,
+        'addressdetails': 1,
+        'accept-language': 'pl',
+    }
+    headers = {
+        'User-Agent': 'WiadoMo-NewsRadar/1.0 (newsradar.wiadomo@gmail.com)'
+    }
+
+    response = requests.get(url, params=params, headers=headers)
+    data = response.json()
+
+    if not data:
+        return None
+
+    result = data[0]
+    lat = float(result['lat'])
+    lon = float(result['lon'])
+    address = result.get('address', {})
+
+    return {
+        'geometry': {
+            'type': 'Point',
+            'coordinates': [lon, lat]
+        },
+        'center': {'lat': lat, 'lon': lon},
+        'address': address
+    }
+
 
 def geocode(query):
     url = "https://nominatim.openstreetmap.org/search"
@@ -195,17 +223,38 @@ def geocode(query):
             'address': address
         }
 
+    return result
 
-def process_articles(site, whitelist):
-    # article_urls = get_aricles_urls(site, whitelist)
-    # # dump article_urls to json
-    # with open(r"article/interia_linki.json", "w", encoding="utf-8") as f:
-    #     json.dump(article_urls, f, ensure_ascii=False, indent=4)
-    
-    article_urls = json.load(open(r"article/interia_linki2304.json", "r", encoding="utf-8"))
+def remove_polygon_geometries(collection):
+    for article in collection.find({
+        "geocode_result.geometry.type": {"$in": ["Polygon", "MultiPolygon"]}
+    }):
+        collection.update_one(
+            {"_id": article["_id"]},
+            {"$unset": {"geocode_result.geometry": ""}}
+        )
+        print(f"Removed poligon: {article['title']}")
+
+def remove_polska(collection):
+    for article in collection.find({
+        "geocode_result.geometry.type": {"$in": ["Polygon", "MultiPolygon"]},
+        "location": "Polska"
+    }):
+        collection.update_one(
+            {"_id": article["_id"]},
+            {"$unset": {"geocode_result.geometry": ""}}
+        )
+        print(f"Removed poligon geometry (Polska): {article['title']}")
+
+
+def process_articles(site, whitelist, collection):
+    article_urls = get_aricles_urls(site, whitelist)
+
+    existing_urls = collection.distinct("url")
+    article_urls = [url for url in article_urls if url not in existing_urls]
 
     articles_data = []
-    for i, article_url in enumerate(article_urls[:150]):
+    for i, article_url in enumerate(article_urls):
         try:
             print(f"[{i+1}/{len(article_urls)}] Processing: {article_url}")
 
@@ -221,7 +270,7 @@ def process_articles(site, whitelist):
             if not a.text:
                 continue
 
-            location = extract_location_mistral(a.text) 
+            location = extract_location(a.text) 
 
             if location.strip().lower().rstrip('.') == "brak":
                 continue
@@ -230,7 +279,10 @@ def process_articles(site, whitelist):
             if not summary or summary == "":
                 summary = a.text[:200] + "..."
 
-            geocode_result = geocode(location)
+            geocode_result = geocode_points(location)
+
+            if geocode_result is None:
+                continue
 
             article_data = {
                 "title": a.title,
@@ -261,22 +313,53 @@ def update_geocode(collection):
                 )
                 print(f"Updated geocode for article: {article['title']}")
 
+def update_date(collection):
+    for article in collection.find():
+        if "date" not in article or article["date"] is None:
+            date = extract_pub_date(article["url"])
+            collection.update_one(
+                {"_id": article["_id"]},
+                {"$set": {"date": date.isoformat()}}
+            )
+            print(f"Updated date for article: {article['title']}")
+
+def update_geocode_json(path):
+    articles_data = json.load(open(path, "r", encoding="utf-8"))
+
+    for article in articles_data:
+        geocode_result = article.get("geocode_result")
+        if geocode_result is None:
+            location = article.get("location")
+            if location:
+                geocode_result = geocode(location)
+                article["geocode_result"] = geocode_result
+                print(f"Updated geocode result for article: {article['title']}")
+    
+    json.dump(articles_data, open(path, "w", encoding="utf-8"), ensure_ascii=False, indent=4)
+
+
+def delete_articles_without_geocode(collection):
+    result = collection.delete_many({"geocode_result": None})
+    print(f"Deleted {result.deleted_count} with no geocode result.")
+
 if __name__ == "__main__":
-    articles_data = process_articles(site, whitelist)
+    articles_data = process_articles(site, whitelist, collection)
 
     # Save articles to json
-    # with open(r"article/interia_mistral1404_3.json", "w", encoding="utf-8") as f:
+    # with open(r"article_json/interia_gemini2304_3.json", "w", encoding="utf-8") as f:
     #     json.dump(articles_data, f, ensure_ascii=False, indent=4)
     # print(f"Saved to json.")
 
-    # TO USUWA CAŁĄ BAZĘ ARTYKUŁÓW!!!!
-    # collection.delete_many({})  
-    
     # Save to MongoDB
     if articles_data:
         collection.insert_many(articles_data)
         print(f"Saved {len(articles_data)} articles to MongoDB.")
 
+    # remove_polygon_geometries(collection)
+    # remove_polska(collection)
+    # update_geocode_json(r"article_json/interia_gemini2304.json")
     # update_geocode(collection)
+    # delete_articles_without_geocode(collection)
+
 
 
