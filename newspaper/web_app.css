@@ -35,7 +35,7 @@ p {
 }
 
 .popup-article {
-    max-width: 500px;
+    max-width: 550px;
     /* width: 100%; */
     width: fit-content;
     box-sizing: border-box; 
@@ -46,48 +46,53 @@ p {
 
 }
 
+a {
+    text-decoration: none;
+}
+
 .popup-article-title {
     font-size: 16px;
     font-weight: 700;
     color: #000000;
-    text-decoration: underline;
+    text-decoration: underline 1px black;
+    text-underline-offset: 2px;
+    margin-bottom: 8px;
 }
 
 .popup-article-info {
     display: flex;
     flex-wrap: wrap; 
-    /* justify-content: space-between;  */
+    justify-content: space-between; 
+    gap: 5px;
+    margin: 0;
+    padding: 0;
+}
+
+p.popup-article-category,
+p.popup-article-location,
+p.popup-article-source {
+    border-radius: 999px;
+    font-size: 11px;
+    letter-spacing: -0.11px;
+    line-height: 1.25;
+    font-weight: 500;
+    white-space: nowrap;
+    margin: 0;
+    padding: 2px 6px;
+} 
+
+.popup-tags {
+    display: flex;
+    flex-wrap: wrap; 
     gap: 5px;
     margin: 0;
     padding: 0;
     align-items: center;
-}
-
-.popup-article-category,
-.popup-article-location,
-.popup-article-source {
-    display: inline-block;
-    border-radius: 999px;
-    font-size: 10px;
-    font-weight: 500;
-    white-space: nowrap;
-    margin: 10px;
-}
-
-.popup-article-info p {
-    font-size: 12px;
-    font-style: normal;
-    font-weight: 500;
-    line-height: 1.25;
-    letter-spacing: -0.11px;
-    gap: 10px;
-    margin: 0;
-    padding: 0;
+    max-width: 80%;
 }
 
 .popup-article-category {
     color: #f5f5f5;
-    padding: 5px 10px;
 }
 
 .popup-article-location {
@@ -100,17 +105,20 @@ p {
     background-color: #9f9f9f;
 }
 
-.popup-article-date {
+p.popup-article-date {
     display: inline-block;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 500;
     white-space: nowrap;
+    padding: 0;
+    padding-top: 2px;
+    margin: 0;
 }
 
 .popup-article-summary {
     color: #00314C;
     font-family: Alegreya;
-    font-size: 12px;
+    font-size: 13px;
     font-style: normal;
     font-weight: 500;
     line-height: 125%;
@@ -179,27 +187,21 @@ p {
 }
 
 #search-container {
-    position: absolute;
-    top: 10px;
-    right: 5%;
-    transform: translateX(-50%);
-    z-index: 9999;
     display: flex;
-    align-items: center;
-    background-color: #f5f5f5;
+    background-color: white;
     border-radius: 999px;
+    padding: 5px;
     box-shadow: 4px 4px 8px rgba(0,0,0,0.2);
-    padding: 4px 8px;
-    height: 40px;
-  }
+}
   
 #search-input {
     border: none;
     outline: none;
     padding: 5px 15px;
-    font-size: 14px;
+    font-size: 16px;
     background: none;
     width: 200px;
+    font-family: Alegreya, serif;
 }
 
 #search-button {
@@ -212,6 +214,75 @@ p {
 #search-button img {
     width: 30px;
     height: 30px;
+}
+
+#map-controls {
+    position: absolute;
+    top: 10px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+}
+
+#map-buttons {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 10px;
+    align-items: flex-end;
+}
+
+.leaflet-control-layers, .filter-button, .locate-user-button {
+    background-color: white;
+    border-radius: 999px;
+    padding: 5px;
+    border: none !important;
+    box-shadow: 4px 4px 8px rgba(0,0,0,0.2) !important;
+    font-family: sans-serif;
+    cursor: pointer;
+    transition: transform 0.2s;
+    
+}
+
+.filter-button:hover, .locate-user-button:hover {
+    transform: scale(1.05);
+    transition: transform 0.2s;
+}
+
+.filter-button, .locate-user-button {
+    width: 54px;
+    height: 54px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.locate-user-button img, .filter-button img {
+    width: 24px;
+    height: 24px;
+}
+
+
+.leaflet-control-layers-expanded {
+background-color: white;
+border-radius: 8px;
+padding: 8px;
+}
+
+.leaflet-control-layers-expanded label {
+    color: #000000;
+    font-size: 14px;
+    font-family: Alegreya, serif;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.leaflet-control-layers-expanded input[type="checkbox"], .leaflet-control-layers-expanded input[type="radio"]  {
+    accent-color: #00314C;
+    width: 14px;
+    height: 14px;
 }
 
 /*
