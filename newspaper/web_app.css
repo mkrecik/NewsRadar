@@ -234,6 +234,75 @@ p.popup-article-date {
 }
 
 .leaflet-control-layers, .filter-button, .locate-user-button {
+    background-color: white;
+    border-radius: 999px;
+    padding: 5px;
+    border: none !important;
+    box-shadow: 4px 4px 8px rgba(0,0,0,0.2) !important;
+    font-family: sans-serif;
+    cursor: pointer;
+    transition: transform 0.2s;
+    
+}
+
+.filter-button:hover, .locate-user-button:hover {
+    transform: scale(1.05);
+    transition: transform 0.2s;
+}
+
+.filter-button, .locate-user-button {
+    width: 54px;
+    height: 54px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.locate-user-button img, .filter-button img {
+    width: 24px;
+    height: 24px;
+}
+
+
+.leaflet-control-layers-expanded {
+background-color: white;
+border-radius: 8px;
+padding: 8px;
+}
+
+.leaflet-control-layers-expanded label {
+    color: #000000;
+    font-size: 14px;
+    font-family: Alegreya, serif;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.leaflet-control-layers-expanded input[type="checkbox"], .leaflet-control-layers-expanded input[type="radio"]  {
+    accent-color: #00314C;
+    width: 14px;
+    height: 14px;
+}
+
+/*
+.leaflet-control-zoom-in, .leaflet-control-zoom-out {
+    background-size: 18px 18px; 
+    text-indent: -9999px;
+    z-index: 9999;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+}
+
+#map-buttons {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 10px;
+    align-items: flex-end;
+}
+
+.leaflet-control-layers, .filter-button, .locate-user-button {
     background-color: #E2E2E2;
     border-radius: 999px;
     padding: 5px;

@@ -2,22 +2,18 @@ import json
 from openai import OpenAI
 
 
-articles = json.load(open(r'article/interia_deep.json', 'r', encoding='utf-8'))
+articles = json.load(open(r'newspaper/article/interia.json', 'r', encoding='utf-8'))
 
 client = OpenAI(
   base_url="https://openrouter.ai/api/v1",
-  api_key="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",
+  api_key="<API_KEY>",
 )
 
 
 def extract_location(article):
     """Wyciąga lokalizacje z podanego tekstu przy użyciu DeepSeek."""
-    prompt = (
-        "Z tekstu poniżej wyodrębnij najdokładniejszą lokalizację głównego wydarzenia "
-        "(jeśli istnieje). Zwróć tylko nazwę miejsca (np. budynek, ulica, miasto, kraj). "
-        "Jeśli brak konkretnej lokalizacji, napisz: 'brak'.\n\n"
-        f"{article['text']}"
-    )
+    prompt = f"Przeczytaj dany artykuł:\n\n{article['text']}. Zdecyduj czy wydarzenie opisane w artykule jest czymś co wydarzyło się w jakiejś lokalizacji, czy bardziej czymś ogólnym co nie można odnieść przestrzennie na mapie w postaci punktu. Jeśli nie można przypisać wydarzeniu konkretnej lokalizacji, którą można zgeokodować, to zwróć informację 'brak lokalizacji w tekście', a jeśli da się to wyciągnij informacje o jak najdokładniejszej lokalizacji wydarzenia z tego artykułu. Ogranicz się do jak namniejszej liczby informacji o lokalizacji, wystarczy sama lokalizacja geograficzna (miasto, kraj, ulica, konkretny budynek), nie podawaj żadnych uzasadnień i opisów. Jeśli znajdziesz więcej niż jedną lokalizację to zdecyduj która jest najważniejsza i najdokładniejsza i w której rzeczywiście coś się wydarzyło i czy dotyczy głównego tematu artykułu. \n\n"
+
     completion = client.chat.completions.create(
         model="deepseek/deepseek-r1:free",
         messages=[
