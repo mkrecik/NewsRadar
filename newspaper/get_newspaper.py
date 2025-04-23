@@ -337,7 +337,6 @@ def update_geocode_json(path):
     
     json.dump(articles_data, open(path, "w", encoding="utf-8"), ensure_ascii=False, indent=4)
 
-
 def delete_articles_without_geocode(collection):
     result = collection.delete_many({"geocode_result": None})
     print(f"Deleted {result.deleted_count} with no geocode result.")

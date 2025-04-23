@@ -49,9 +49,9 @@ fetch('http://127.0.0.1:8000/articles')
       const location =
         address.city ||
         address.town ||
+        address.village ||
         address.administrative ||
         address.state ||
-        address.village ||
         address.country ||
         address.continent;
       
