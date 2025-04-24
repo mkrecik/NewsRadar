@@ -6,29 +6,29 @@ L.tileLayer('https://api.maptiler.com/maps/winter-v2/{z}/{x}/{y}.png?key=h7HjjXD
 const categoryIcons = {
     "Wydarzenia": L.icon({ iconUrl: 'icons/wydarzenia.svg'}),
     "Polityka": L.icon({ iconUrl: 'icons/polityka.svg'}),
-    "Gospodarka": L.icon({ iconUrl: 'icons/gospodarka.svg'}),
+    "Gospodarka i Społeczeństwo": L.icon({ iconUrl: 'icons/gospodarka.svg'}),
     "Kultura": L.icon({ iconUrl: 'icons/kultura.svg'}),
     "Sport": L.icon({ iconUrl: 'icons/sport.svg'}),
-    "Pogoda": L.icon({ iconUrl: 'icons/pogoda.svg'}),
+    "Pogoda i Natura": L.icon({ iconUrl: 'icons/pogoda.svg'}),
     "Inne": L.icon({ iconUrl: 'icons/inne.svg'})
   };
 
 const categoryColors = {
     "Wydarzenia": "#660001",
     "Polityka": "#990001",
-    "Gospodarka": "#CC0002",
+    "Gospodarka i Społeczeństwo": "#CC0002",
     "Sport": "#0D5F8C",
     "Kultura": "#4E8CB0",
-    "Pogoda": "#00314C",
+    "Pogoda i Natura": "#00314C",
   };
 
 const categoryLayers = {
     "Wydarzenia": L.layerGroup(),
     "Polityka": L.layerGroup(),
-    "Gospodarka": L.layerGroup(),
+    "Gospodarka i Społeczeństwo": L.layerGroup(),
     "Sport": L.layerGroup(),
     "Kultura": L.layerGroup(),
-    "Pogoda": L.layerGroup(),
+    "Pogoda i Natura": L.layerGroup(),
     "Inne": L.layerGroup()
 };
 
@@ -54,7 +54,8 @@ function showArticles(articles) {
             address.administrative ||
             address.state ||
             address.country ||
-            address.continent;
+            address.continent ||
+            address.bay;
 
 
       let articleDate = "";
@@ -404,37 +405,6 @@ document.querySelectorAll('.date-filter-btn').forEach(btn => {
     const anyFilterActive = Object.values(filters).some(v => v === true);
     showArticles(anyFilterActive ? filtered : allArticles);
   }
-
-// lokalizacja użytkownika
-  let userLocationCircle = null;
-
-  function locateUser(map) {
-      map.locate({ setView: true, maxZoom: 16 });
-
-      map.once('locationfound', (e) => {
-          // Usuń poprzedni okrąg, jeśli istnieje
-          if (userLocationCircle) {
-              map.removeLayer(userLocationCircle);
-          }
-          
-          userLocationCircle = L.circle(e.latlng, {
-              radius: e.accuracy,
-              color: '#136AEC',
-              fillColor: '#136AEC',
-              fillOpacity: 0.15
-          }).addTo(map);
-      });
-
-    map.once('locationerror', (e) => {
-        alert("Nie udało się pobrać lokalizacji: " + e.message);
-    });
-}
-
-locateUser(map);
-
-document.querySelector(".locate-user-button").addEventListener("click", () => {
-  locateUser(map);
-});
 
 var baseLayers = {
     "MapTiler": L.tileLayer('https://api.maptiler.com/maps/winter-v2/{z}/{x}/{y}.png?key=h7HjjXDoOt4QndexKLba', {

@@ -9,7 +9,7 @@ from transformers import AutoTokenizer, AutoModelForTokenClassification, pipelin
 import torch
 import numpy as np
 from openai import OpenAI
-from datetime import datetime
+from datetime import datetime, timezone
 
 from api import MONGO_URI, OPENROUTER_API_KEY
 
@@ -17,10 +17,11 @@ from api import MONGO_URI, OPENROUTER_API_KEY
 # python -m spacy download pl_core_news_lg
 
 ### baza danych
-
 db_client = MongoClient(MONGO_URI)
 db = db_client["newspaper"]
 collection = db["articles"]
+polygon_collection = db["polygons"]
+
 
 ### geoextracting model
 ai_client = OpenAI(
@@ -31,7 +32,6 @@ ai_client = OpenAI(
 model_mistral = "mistralai/mistral-small-3.1-24b-instruct"
 model_mistral_free = "mistralai/mistral-small-3.1-24b-instruct:free"
 model_gemini = "google/gemini-2.0-flash-001"
-model_gpt = "openai/gpt-4.1"
 
 site = 'https://www.interia.pl/'
 
@@ -49,28 +49,89 @@ whitelist = [
     "https://e.sport.interia.pl",
 ]
 blacklist = [
-    "https://pogoda.interia.pl/polska/prognoza"
+    "https://pogoda.interia.pl/polska/prognoza",
+    "https://gry.interia.pl/"
 ]
 
-categories_dict = { 
-    'Wydarzenia':   ["https://wydarzenia.interia.pl"],
-    'Polityka':     ["https://www.interia.pl/"],
-    'Sport':        ["https://sport.interia.pl",
-                    "https://e.sport.interia.pl"],
-    'Kultura':      ["https://muzyka.interia.pl"],
-    'Pogoda':       ["https://pogoda.interia.pl",
-                    "https://zielona.interia.pl"],
-    'Gospodarka':   ["https://biznes.interia.pl"],
-    'Inne':         ["https://extra.interia.pl",
-                    "https://tygodnik.interia.pl"]
-}
+def extract_pub_date(soup):
+    time_tag = soup.find("time", attrs={"data-testid": "publish-date"})
+    if time_tag and time_tag.has_attr("datetime"):
+        try:
+            return date_parse(time_tag["datetime"])
+        except Exception as e:
+            print("Błąd parsowania daty z <time>:", e)
 
-def get_category(url):
-    for category, keywords in categories_dict.items():
-        if any(keyword in url for keyword in keywords):
-            return category
-    return "Inne"
+    meta_tag = soup.find("meta", attrs={"itemprop": "datePublished"})
+    if meta_tag and meta_tag.has_attr("content"):
+        try:
+            return date_parse(meta_tag["content"])
+        except Exception as e:
+            print("Błąd parsowania daty z <meta>:", e)
 
+    return datetime.now()
+
+def extract_summary(soup):
+    summary_tag = soup.find("p", class_="ids-paragraph--lead")
+    if not summary_tag:
+        summary_tag = soup.find("p", class_="sc-dkqQuH hKkjLe")
+        if not summary_tag:
+            summary_tag = soup.find("p", class_="article-lead")
+
+    if summary_tag:
+        return summary_tag.get_text(strip=True)
+
+    return None
+
+# Kategorie
+kategorie = [
+    "Wydarzenia",
+    "Polityka",
+    "Gospodarka i Społeczeństwo",
+    "Kultura",
+    "Sport",
+    "Pogoda i Natura",
+    "Inne"
+]
+
+def extract_category(url, text, model = model_gemini):
+    if "pogoda" in url:
+        return "Pogoda i Natura"
+    elif "sport" in url:
+        return "Sport"
+    try:
+        completion = ai_client.chat.completions.create(
+            model=model,
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        f"Przeczytaj dany artykuł."
+                        f"Na podstawie treści artykułu przypisz mu najbardziej pasującą kategorię spośród: "
+                        f"{', '.join(kategorie[:-1])}. Gospodarka i Społeczeństwo to jedna kategoria, Pogoda i Natura to również jedna kategoria,  nie rozdzielaj ich. Jeśli coś pasuje do gospodarki, to ma kategorie Gospodarka i Społeczeństwo, jeśli coś pasuje do społeczeństwa to również ma kategorie Gospodarka i Społeczeństwo. Kategoria Pogoda i Natura działa na tej samej zasadzie. Odzielna kategoria o nazwie Społeczeństwo nie istnieje. Odzielna kategoria o nazwie Gospodarka nie istnieje. Odzielna kategoria o nazwie Pogoda nie istnieje. Odzielna kategoria o nazwie Natura nie istnieje. Jeśli żadna z nich naprawdę nie pasuje, przypisz kategorię 'Inne'. "
+                        f"Zwróć tylko nazwę kategorii, bez dodatkowych komentarzy.\n\n"
+                    )
+                },
+                {
+                    "role": "user",
+                    "content": text.strip()
+                }
+            ],
+            extra_headers={
+                "HTTP-Referer": "http://localhost",
+                "X-Title": "NewsRadar"
+            }
+        )
+        if completion and completion.choices:
+            category = completion.choices[0].message.content.strip()
+        else:
+            print("Brak odpowiedzi od modelu. Ustawiam kategorię 'Inne'")
+            category = "Inne"
+        
+        return category
+
+    except Exception as e:
+        print("Błąd w extract_category:", e)
+        return "brak"
 
 def extract_location(text, model = model_gemini):
     try:
@@ -81,7 +142,7 @@ def extract_location(text, model = model_gemini):
                     "role": "system",
                     "content": (
                     "Z tekstu wyodrębnij najdokładniejszą lokalizację - miejsce wydarzenia artykułu."
-                    "(np. budynek lub obiekt, pełny adres lub jeżeli nie ma dodkładnego miejsca -  miejscowość, stan lub kraj) w oryginalnej nazwie. "
+                    "(np. budynek lub obiekt, pełny adres lub jeżeli nie ma dokładnego miejsca -  miejscowość, stan lub kraj) w oryginalnej nazwie. "
                     "Zwróć TYLKO lokalizację, bez cytowania lub komentarzy. "
                     "Jeśli znajdziesz więcej niż jedną lokalizację to zdecyduj która jest najważniejsza i najdokładniejsza "
                     "i w której rzeczywiście coś się wydarzyło i czy dotyczy głównego tematu artykułu."
@@ -107,7 +168,7 @@ def extract_location(text, model = model_gemini):
 def get_aricles_urls(site, whitelist):
     article_urls = []
 
-    news_site = build(site, memoize_articles=False)
+    news_site = build(site, memorize_articles=False)
     site_urls = [article.url for article in news_site.articles]
     article_urls.extend(site_urls)
 
@@ -123,23 +184,6 @@ def get_aricles_urls(site, whitelist):
     print('Number of articles:', len(filtered_urls))
 
     return filtered_urls
-
-def extract_pub_date(soup):
-    time_tag = soup.find("time", attrs={"data-testid": "publish-date"})
-    if time_tag and time_tag.has_attr("datetime"):
-        try:
-            return date_parse(time_tag["datetime"])
-        except Exception as e:
-            print("Błąd parsowania daty z <time>:", e)
-
-    meta_tag = soup.find("meta", attrs={"itemprop": "datePublished"})
-    if meta_tag and meta_tag.has_attr("content"):
-        try:
-            return date_parse(meta_tag["content"])
-        except Exception as e:
-            print("Błąd parsowania daty z <meta>:", e)
-
-    return datetime.now()
 
 def geocode_points(query):
     url = "https://nominatim.openstreetmap.org/search"
@@ -244,6 +288,79 @@ def remove_polska(collection):
         )
         print(f"Removed poligon geometry (Polska): {article['title']}")
 
+def save_poligons(geocode_result, polygon_collection, location, article_url):
+    center = geocode_result["center"]
+    address = geocode_result.get("address", {})
+
+    existing = polygon_collection.find_one({
+        "center.lat": center["lat"],
+        "center.lon": center["lon"]
+    })
+
+    # alternatywnie można dodać warunek na address, np. porównać województwo, kraj, miasto:
+    # is_duplicate = polygon_collection.find_one({
+    #     "address.city": address.get("city"),
+    #     "address.state": address.get("state")
+    # })
+
+    if existing:
+        # unikamy duplikatów URL
+        if "articles" not in existing or article_url not in existing["articles"]:
+            polygon_collection.update_one(
+                {"_id": existing["_id"]},
+                {"$addToSet": {"articles": article_url}}
+            )
+    else:
+        polygon_doc = {
+            "location": location,
+            "geometry": geocode_result["geometry"],
+            "center": center,
+            "address": address,
+            "articles": [article_url]
+        }
+        polygon_collection.insert_one(polygon_doc)
+
+def print_articles(site, whitelist):
+    article_urls = get_aricles_urls(site, whitelist)
+
+    existing_urls = collection.distinct("url")
+    article_urls = [url for url in article_urls if url not in existing_urls]
+
+    for i, article_url in enumerate(article_urls[:20]):
+        try:
+            print(f"[{i+1}/{len(article_urls)}] Article: {article_url}")
+
+            response = requests.get(article_url, timeout=10)
+            soup = BeautifulSoup(response.content, "html.parser")
+
+            a = Article(article_url, language="pl")
+            a.download()
+            a.parse()
+
+            if not a.text:
+                continue
+
+            pub_date = a.publish_date
+            if not pub_date:
+                pub_date = extract_pub_date(soup)
+
+            summary = a.summary
+            if not summary or summary == "":
+                summary = extract_summary(soup)
+                if not summary or summary == "":
+                    summary = a.text[:200]
+
+
+            print("Title: ", a.title)
+            print("Date: ", pub_date)
+            print("Summary: ", summary)
+            print("Text: ", a.text[:200])
+            print("Source: ", a.source_url.replace("https://", ""))
+            print("\n")
+
+        except Exception as e:
+            print(f"Error processing {article_url}: {e}")
+
 
 def process_articles(site, whitelist, collection):
     article_urls = get_aricles_urls(site, whitelist)
@@ -259,8 +376,6 @@ def process_articles(site, whitelist, collection):
             response = requests.get(article_url, timeout=10)
             soup = BeautifulSoup(response.content, "html.parser")
 
-            pub_date = extract_pub_date(soup)
-
             a = Article(article_url, language="pl")
             a.download()
             a.parse()
@@ -268,25 +383,39 @@ def process_articles(site, whitelist, collection):
             if not a.text:
                 continue
 
-            location = extract_location(a.text) 
-
-            if location.strip().lower().rstrip('.') == "brak":
-                continue
+            pub_date = a.publish_date
+            if not pub_date:
+                pub_date = extract_pub_date(soup)
 
             summary = a.summary
             if not summary or summary == "":
-                summary = a.text[:200] + "..."
+                summary = extract_summary(soup)
+                if not summary or summary == "":
+                    summary = a.text[:200]
 
-            geocode_result = geocode_points(location)
+            location = extract_location(a.text) 
+            if location.strip().lower().rstrip('.') == "brak":
+                continue
 
+            geocode_result = geocode(location)
             if geocode_result is None:
                 continue
+            
+            category = extract_category(a.source_url, a.text)
+
+            # zapisz poligony do osobnej kolekcji
+            if (
+                geocode_result.get("geometry_type") in ["Polygon", "MultiPolygon"]
+                and "geometry" in geocode_result
+            ):
+                save_poligons(geocode_result, polygon_collection, location)
+                geocode_result.pop("geometry", None)
 
             article_data = {
                 "title": a.title,
                 "url": a.url,
                 "date": a.publish_date.isoformat() if a.publish_date else pub_date.isoformat() if pub_date else None,
-                "category": get_category(article_url),
+                "category": category,
                 "source": a.source_url,
                 "location": location,
                 "summary": summary,
@@ -299,6 +428,16 @@ def process_articles(site, whitelist, collection):
 
     return articles_data
 
+def update_date(collection):
+    for article in collection.find():
+        if "date" not in article or article["date"] is None:
+            date = extract_pub_date(article["url"])
+            collection.update_one(
+                {"_id": article["_id"]},
+                {"$set": {"date": date.isoformat()}}
+            )
+            print(f"Zaktualizowano datę dla: {article['title']}")
+
 def update_geocode(collection):
     for article in collection.find():
         if "geocode_result" not in article or article["geocode_result"] is None:
@@ -309,17 +448,30 @@ def update_geocode(collection):
                     {"_id": article["_id"]},
                     {"$set": {"geocode_result": geocode_result}}
                 )
-                print(f"Updated geocode for article: {article['title']}")
+                print(f"Zaktualizowano geokodowanie dla: {article['title']}")
 
-def update_date(collection):
+def update_category(collection):
     for article in collection.find():
-        if "date" not in article or article["date"] is None:
-            date = extract_pub_date(article["url"])
-            collection.update_one(
-                {"_id": article["_id"]},
-                {"$set": {"date": date.isoformat()}}
-            )
-            print(f"Updated date for article: {article['title']}")
+        url = article.get("url")
+        if not url:
+            continue
+
+        try:
+            a = Article(url, language="pl")
+            a.download()
+            a.parse()
+            text = a.text.strip()
+
+            category = extract_category(url, text)
+            if category:
+                collection.update_one(
+                    {"_id": article["_id"]},
+                    {"$set": {"category": category}}
+                )
+                print(f"Zaktualizowano: {article.get('title', url)}, kategoria: {category}")
+        except Exception as e:
+            print(f"Błąd podczas pobierania lub aktualizacji kategorii dla: {url}\n{e}")
+
 
 def update_geocode_json(path):
     articles_data = json.load(open(path, "r", encoding="utf-8"))
@@ -335,15 +487,81 @@ def update_geocode_json(path):
     
     json.dump(articles_data, open(path, "w", encoding="utf-8"), ensure_ascii=False, indent=4)
 
+def fix_category_order(collection):
+    result = collection.update_many(
+        {"category": "Społeczeństwo i Gospodarka"},
+        {"$set": {"category": "Gospodarka i Społeczeństwo"}}
+    )
+    print(f"Zaktualizowano {result.modified_count} artykułów.")
+
+
+def rebuild_polygons_from_articles(article_collection, polygon_collection):
+    # Pobieranie tylko artykułów z geometrią typu Polygon/MultiPolygon
+    articles = article_collection.find({
+        "geocode_result.geometry_type": { "$in": ["Polygon", "MultiPolygon"] }
+    })
+
+    count = 0
+    for article in articles:
+        location = article.get("location")
+        url = article.get("url")
+
+        if not location or not url:
+            continue
+
+        geocode_result = geocode(location)
+        if not geocode_result:
+            continue
+
+        # tylko jeśli faktycznie znowu Polygon lub MultiPolygon
+        if (
+            geocode_result.get("geometry_type") in ["Polygon", "MultiPolygon"]
+            and "geometry" in geocode_result
+        ):
+            center = geocode_result["center"]
+            address = geocode_result.get("address", {})
+
+            existing = polygon_collection.find_one({
+                "center.lat": center["lat"],
+                "center.lon": center["lon"]
+            })
+
+            if existing:
+                polygon_collection.update_one(
+                    {"_id": existing["_id"]},
+                    {
+                        "$addToSet": {"articles": url},
+                        "$set": {
+                            "location": location,
+                            "address": address,
+                            "geometry": geocode_result["geometry"]
+                        }
+                    }
+                )
+            else:
+                polygon_doc = {
+                    "location": location,
+                    "geometry": geocode_result["geometry"],
+                    "center": center,
+                    "address": address,
+                    "articles": [url]
+                }
+                polygon_collection.insert_one(polygon_doc)
+
+            count += 1
+
+    print(f"Updated or saved {count} poligons.")
+
 def delete_articles_without_geocode(collection):
     result = collection.delete_many({"geocode_result": None})
     print(f"Deleted {result.deleted_count} with no geocode result.")
 
 if __name__ == "__main__":
     articles_data = process_articles(site, whitelist, collection)
+    # print_articles(site, whitelist)
 
-    # Save articles to json
-    # with open(r"article_json/interia_gemini2304_3.json", "w", encoding="utf-8") as f:
+    # # Save articles to json
+    # with open(r"article_json/interia_gemini2404.json", "w", encoding="utf-8") as f:
     #     json.dump(articles_data, f, ensure_ascii=False, indent=4)
     # print(f"Saved to json.")
 
@@ -357,6 +575,9 @@ if __name__ == "__main__":
     # update_geocode_json(r"article_json/interia_gemini2304.json")
     # update_geocode(collection)
     # delete_articles_without_geocode(collection)
+    # update_category(collection)
+    # rebuild_polygons_from_articles(collection, polygon_collection)
+    # fix_category_order(collection)
 
 
 
