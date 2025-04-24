@@ -405,6 +405,37 @@ document.querySelectorAll('.date-filter-btn').forEach(btn => {
     showArticles(anyFilterActive ? filtered : allArticles);
   }
 
+// lokalizacja użytkownika
+  let userLocationCircle = null;
+
+  function locateUser(map) {
+      map.locate({ setView: true, maxZoom: 16 });
+
+      map.once('locationfound', (e) => {
+          // Usuń poprzedni okrąg, jeśli istnieje
+          if (userLocationCircle) {
+              map.removeLayer(userLocationCircle);
+          }
+          
+          userLocationCircle = L.circle(e.latlng, {
+              radius: e.accuracy,
+              color: '#136AEC',
+              fillColor: '#136AEC',
+              fillOpacity: 0.15
+          }).addTo(map);
+      });
+
+    map.once('locationerror', (e) => {
+        alert("Nie udało się pobrać lokalizacji: " + e.message);
+    });
+}
+
+locateUser(map);
+
+document.querySelector(".locate-user-button").addEventListener("click", () => {
+  locateUser(map);
+});
+
 var baseLayers = {
     "MapTiler": L.tileLayer('https://api.maptiler.com/maps/winter-v2/{z}/{x}/{y}.png?key=h7HjjXDoOt4QndexKLba', {
         maxZoom: 19
