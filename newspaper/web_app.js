@@ -36,45 +36,90 @@ const markerLayer = L.layerGroup().addTo(map);
 const polygonLayer = L.layerGroup().addTo(map);
 const centroidLayer = L.layerGroup().addTo(map);
 
+function showArticles(articles) {
+    markerLayer.clearLayers();
+    polygonLayer.clearLayers();
+    centroidLayer.clearLayers();
+  
+    articles.forEach(article => {
+        const geometry = article.geocode_result?.geometry;
+        const category = article.category;
+        const src = article.source;
+        const source = src.replace(/^https?:\/\//, "");
+        const address = article.geocode_result.address;
+        const location =
+            address.city ||
+            address.town ||
+            address.village ||
+            address.administrative ||
+            address.state ||
+            address.country ||
+            address.continent;
+
+
+      let articleDate = "";
+      if (article.date) {
+        articleDate = new Date(article.date).toLocaleDateString('pl-PL', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit'
+        });
+      }
+  
+      process_geometry(geometry, category, source, location, article, articleDate);
+    });
+  }
+
+
+let allArticles = [];
 // pobranie danych z backendu
 fetch('http://127.0.0.1:8000/articles')
   .then(response => response.json())
   .then(data => {
-    data.forEach(article => {
-      const geometry = article.geocode_result?.geometry;
-      const category = article.category;
-      const src = article.source;
-      const source = src.replace(/^https?:\/\//, "");
-      const address = article.geocode_result.address;
-      const location =
-        address.city ||
-        address.town ||
-        address.village ||
-        address.administrative ||
-        address.state ||
-        address.country ||
-        address.continent;
+    allArticles = data; // zapisz do zmiennej
+    showArticles(data); // wyświetl wszystko na start
+  });
+    
+
+// // pobranie danych z backendu
+// fetch('http://127.0.0.1:8000/articles')
+//   .then(response => response.json())
+//   .then(data => {
+//     data.forEach(article => {
+//       const geometry = article.geocode_result?.geometry;
+//       const category = article.category;
+//       const src = article.source;
+//       const source = src.replace(/^https?:\/\//, "");
+//       const address = article.geocode_result.address;
+//       const location =
+//         address.city ||
+//         address.town ||
+//         address.village ||
+//         address.administrative ||
+//         address.state ||
+//         address.country ||
+//         address.continent;
       
-      let articleDate = "";
-      if (article.date) {
-        articleDate = new Date(article.date).toLocaleDateString('pl-PL', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit'
-        });
-      } 
-      console.log('Artykuł:', {
-        geometry,
-        category,
-        source,
-        location,
-        articleDate
-      });
+//       let articleDate = "";
+//       if (article.date) {
+//         articleDate = new Date(article.date).toLocaleDateString('pl-PL', {
+//             year: 'numeric',
+//             month: '2-digit',
+//             day: '2-digit'
+//         });
+//       } 
+//       console.log('Artykuł:', {
+//         geometry,
+//         category,
+//         source,
+//         location,
+//         articleDate
+//       });
       
-      process_geometry(geometry, category, source, location, article, articleDate);
-    });
-  })
-  .catch(error => console.error('Błąd podczas ładowania artykułów:', error));
+//       process_geometry(geometry, category, source, location, article, articleDate);
+//     });
+//   })
+//   .catch(error => console.error('Błąd podczas ładowania artykułów:', error));
 
 
 function process_geometry(geometry, category, source, location, article, date) {
@@ -214,10 +259,17 @@ searchInput.addEventListener("keydown", (event) => {
   }
 });
 
-
 map.removeControl(map.zoomControl);
 
+const filterBtn = document.querySelector(".filter-button");
+const filtersPanel = document.getElementById("filters");
 
+filterBtn.addEventListener("click", () => {
+  filtersPanel.classList.toggle("show");
+});
+
+
+// zoom in zoom out
 const CustomZoomControl = L.Control.extend({
     onAdd: function (map) {
         const container = L.DomUtil.create('div', 'custom-zoom-container');
@@ -242,6 +294,125 @@ const CustomZoomControl = L.Control.extend({
 
 map.addControl(new CustomZoomControl({ position: 'bottomleft' }));
 
+// filtrowanie
+document.querySelectorAll('.date-filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        // Sprawdzenie, czy przycisk jest już aktywny
+        const filter = btn.dataset.filter;
+        const isActive = btn.classList.contains('active');
+  
+        // Jeśli przycisk jest aktywny, to usuwamy filtr
+        if (isActive) {
+            // Usunięcie klasy 'active' i pokazanie wszystkich artykułów
+            btn.classList.remove('active');
+            showArticles(allArticles); // Wyświetl wszystkie artykuły
+        } else {
+            // Dodanie klasy 'active' i filtracja artykułów
+            document.querySelectorAll('.date-filter-btn').forEach(b => b.classList.remove('active')); // Usuwamy aktywność z innych przycisków
+            btn.classList.add('active'); // Ustawiamy przycisk jako aktywny
+  
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+  
+            let filtered = [];
+  
+            if (filter === 'today') {
+                filtered = allArticles.filter(article => {
+                    const articleDate = new Date(article.date);
+                    articleDate.setHours(0, 0, 0, 0);
+                    return articleDate.getTime() === today.getTime();
+                });
+            }
+  
+            if (filter === 'week') {
+                const weekAgo = new Date(today);
+                weekAgo.setDate(weekAgo.getDate() - 7);
+                filtered = allArticles.filter(article => {
+                    const articleDate = new Date(article.date);
+                    articleDate.setHours(0, 0, 0, 0);
+                    return articleDate >= weekAgo && articleDate <= today;
+                });
+            }
+  
+            if (filter === 'yesterday') {
+                const yesterday = new Date(today);
+                yesterday.setDate(yesterday.getDate() - 1);
+                filtered = allArticles.filter(article => {
+                    const articleDate = new Date(article.date);
+                    articleDate.setHours(0, 0, 0, 0);
+                    return articleDate.getTime() === yesterday.getTime();
+                });
+            }
+  
+            if (filter === 'month') {
+                const monthAgo = new Date(today);
+                monthAgo.setMonth(today.getMonth() - 1);
+                filtered = allArticles.filter(article => {
+                    const articleDate = new Date(article.date);
+                    articleDate.setHours(0, 0, 0, 0);
+                    return articleDate >= monthAgo && articleDate <= today;
+                });
+            }
+  
+            showArticles(filtered); 
+        }
+    });
+  });
+  
+  const filtersDiv = document.getElementById("filters");
+  
+  const filters = {
+    today: false,
+    yesterday: false,
+    week: false,
+    month: false
+  };
+  
+  filtersDiv.addEventListener("change", (e) => {
+    if (e.target.type === "checkbox") {
+      const filter = e.target.value;
+      filters[filter] = e.target.checked;
+      applyDateFilters();
+    }
+  });
+  
+  function applyDateFilters() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+  
+    let filtered = allArticles.filter(article => {
+      const articleDate = new Date(article.date);
+      articleDate.setHours(0, 0, 0, 0);
+  
+      let match = false;
+  
+      if (filters.today && articleDate.getTime() === today.getTime()) match = true;
+  
+      if (filters.yesterday) {
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        if (articleDate.getTime() === yesterday.getTime()) match = true;
+      }
+  
+      if (filters.week) {
+        const weekAgo = new Date(today);
+        weekAgo.setDate(today.getDate() - 7);
+        if (articleDate >= weekAgo && articleDate <= today) match = true;
+      }
+  
+      if (filters.month) {
+        const monthAgo = new Date(today);
+        monthAgo.setMonth(today.getMonth() - 1);
+        if (articleDate >= monthAgo && articleDate <= today) match = true;
+      }
+  
+      return match;
+    });
+  
+    // Jeśli żaden checkbox nie jest zaznaczony, pokaż wszystkie artykuły
+    const anyFilterActive = Object.values(filters).some(v => v === true);
+    showArticles(anyFilterActive ? filtered : allArticles);
+  }
 
 var baseLayers = {
     "MapTiler": L.tileLayer('https://api.maptiler.com/maps/winter-v2/{z}/{x}/{y}.png?key=h7HjjXDoOt4QndexKLba', {

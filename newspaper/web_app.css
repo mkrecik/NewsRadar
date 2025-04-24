@@ -129,7 +129,6 @@ p.popup-article-date {
     /* padding: 5px 0; */
 }
 
-
 .category-toggle-control {
     display: inline-flex; 
     flex-direction: column;
@@ -188,12 +187,13 @@ p.popup-article-date {
 
 #search-container {
     display: flex;
+    flex-direction: row-reverse;
     background-color: white;
     border-radius: 999px;
     padding: 5px;
     box-shadow: 4px 4px 8px rgba(0,0,0,0.2);
 }
-  
+ 
 #search-input {
     border: none;
     outline: none;
@@ -202,13 +202,15 @@ p.popup-article-date {
     background: none;
     width: 200px;
     font-family: Alegreya, serif;
+    padding-left: 0;
 }
-
+ 
 #search-button {
     background: none;
     border: none;
     cursor: pointer;
     padding: 5px;
+    height: 40px;
 }
 
 #search-button img {
@@ -233,68 +235,6 @@ p.popup-article-date {
     align-items: flex-end;
 }
 
-.leaflet-control-layers, .filter-button, .locate-user-button {
-    background-color: white;
-    border-radius: 999px;
-    padding: 5px;
-    border: none !important;
-    box-shadow: 4px 4px 8px rgba(0,0,0,0.2) !important;
-    font-family: sans-serif;
-    cursor: pointer;
-    transition: transform 0.2s;
-    
-}
-
-.filter-button:hover, .locate-user-button:hover {
-    transform: scale(1.05);
-    transition: transform 0.2s;
-}
-
-.filter-button, .locate-user-button {
-    width: 54px;
-    height: 54px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.locate-user-button img, .filter-button img {
-    width: 24px;
-    height: 24px;
-}
-
-
-.leaflet-control-layers-expanded {
-background-color: white;
-border-radius: 8px;
-padding: 8px;
-}
-
-.leaflet-control-layers-expanded label {
-    color: #000000;
-    font-size: 14px;
-    font-family: Alegreya, serif;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.leaflet-control-layers-expanded input[type="checkbox"], .leaflet-control-layers-expanded input[type="radio"]  {
-    accent-color: #00314C;
-    width: 14px;
-    height: 14px;
-}
-
-/*
-.leaflet-control-zoom-in, .leaflet-control-zoom-out {
-    background-size: 18px 18px; 
-    text-indent: -9999px;
-    z-index: 9999;
-    display: flex;
-    gap: 10px;
-    align-items: flex-start;
-}
-
 #map-buttons {
     display: flex;
     flex-direction: column-reverse;
@@ -310,7 +250,8 @@ padding: 8px;
     box-shadow: 4px 4px 8px rgba(0,0,0,0.2) !important;
     cursor: pointer;
     transition: transform 0.2s;
-    
+    font-family: Alegreya, serif;
+    font-size: 14px;
 }
 
 .filter-button:hover, .locate-user-button:hover {
@@ -331,17 +272,15 @@ padding: 8px;
     height: 30px;
 }
 
-
 .leaflet-control-layers-expanded {
-    background-color: white;
-    border-radius: 8px;
+    background-color: #E2E2E2;
+    border-radius: 10px;
     padding: 8px;
 }
 
 .leaflet-control-layers-expanded label {
-    color: #000000;
+    color: #00314C;
     font-size: 14px;
-    font-family: Alegreya, serif;
     display: flex;
     align-items: center;
     gap: 6px;
@@ -381,9 +320,79 @@ padding: 8px;
     color: #00314C;
     cursor: pointer;
     transition: transform 0.2s ease;
+    z-index: 9999;
 }
 
 .zoom-btn:hover {
-transform: scale(1.05);
+    transform: scale(1.05);
 }
+
+#filters {
+    display: none;
+}
+#filters.show {
+    display: block;
+}
+
+#filters.date-filters {
+    position: absolute;
+    top: 80px;
+    right: 30px;
+    z-index: 9999;
+    background-color: #E2E2E2;
+    color:#00314C;
+    padding: 10px 15px;
+    border-radius: 10px;
+    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.date-filters label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-size: 14px;
+    gap: 8px;
+    user-select: none;
+}
+
+.date-filters input[type="checkbox"] {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #00314C;
+    font-size: 14px;
+    font-family: Alegreya;
+    border-radius: 50%;
+    position: relative;
+    background-color: white;
+    cursor: pointer;
+    transition: background-color 0.2s, box-shadow 0.2s;
+}
+
+.date-filters input[type="checkbox"]:hover {
+    background-color: #c1d4e0; 
+    box-shadow: inset 0 0 0 1px white; 
+}
+
+.date-filters input[type="checkbox"]:checked {
+    background-color: #00314C;
+    box-shadow: inset 0 0 0 4px white;
+}
+  
+.filter-wrapper {
+    position: relative;
+    display: inline-block;
+  }
+  
+  #filters {
+    display: none;
+    position: absolute;
+    top: 110%;
+    right: 0;
+    z-index: 10000;
+  }
+  
+  #filters.show {
+    display: block;
+  }
   

@@ -17,14 +17,12 @@ from api import MONGO_URI, OPENROUTER_API_KEY
 # python -m spacy download pl_core_news_lg
 
 ### baza danych
-# MONGO_URI = ""
 
 db_client = MongoClient(MONGO_URI)
 db = db_client["newspaper"]
 collection = db["articles"]
 
 ### geoextracting model
-# OPENROUTER_API_KEY = ""
 ai_client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
     api_key=OPENROUTER_API_KEY,
@@ -238,7 +236,7 @@ def remove_polygon_geometries(collection):
 def remove_polska(collection):
     for article in collection.find({
         "geocode_result.geometry.type": {"$in": ["Polygon", "MultiPolygon"]},
-        "location": "Polska"
+        "location": {"$in": ["Polska", "Polsce"]}
     }):
         collection.update_one(
             {"_id": article["_id"]},
