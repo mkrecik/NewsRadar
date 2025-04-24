@@ -261,14 +261,6 @@ searchInput.addEventListener("keydown", (event) => {
 
 map.removeControl(map.zoomControl);
 
-const filterBtn = document.querySelector(".filter-button");
-const filtersPanel = document.getElementById("filters");
-
-filterBtn.addEventListener("click", () => {
-  filtersPanel.classList.toggle("show");
-});
-
-
 // zoom in zoom out
 const CustomZoomControl = L.Control.extend({
     onAdd: function (map) {
@@ -294,22 +286,21 @@ const CustomZoomControl = L.Control.extend({
 
 map.addControl(new CustomZoomControl({ position: 'bottomleft' }));
 
-// filtrowanie
+// filter by date
+const filterBtn = document.querySelector(".filter-button");
+const filtersPanel = document.getElementById("filters");
+
 document.querySelectorAll('.date-filter-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-        // Sprawdzenie, czy przycisk jest już aktywny
         const filter = btn.dataset.filter;
         const isActive = btn.classList.contains('active');
-  
-        // Jeśli przycisk jest aktywny, to usuwamy filtr
+
         if (isActive) {
-            // Usunięcie klasy 'active' i pokazanie wszystkich artykułów
             btn.classList.remove('active');
-            showArticles(allArticles); // Wyświetl wszystkie artykuły
+            showArticles(allArticles);
         } else {
-            // Dodanie klasy 'active' i filtracja artykułów
-            document.querySelectorAll('.date-filter-btn').forEach(b => b.classList.remove('active')); // Usuwamy aktywność z innych przycisków
-            btn.classList.add('active'); // Ustawiamy przycisk jako aktywny
+            document.querySelectorAll('.date-filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active'); 
   
             const today = new Date();
             today.setHours(0, 0, 0, 0);
@@ -434,7 +425,6 @@ var overlays = {
 const layersControl = L.control.layers(baseLayers, overlays, { position: 'topright' });
 layersControl.addTo(map);
 
-// Teraz przeniesienie kontrolki do własnego kontenera
 const leafletLayersControl = document.querySelector(".leaflet-control-layers");
 const customContainer = document.getElementById("map-buttons");
 

@@ -18,12 +18,12 @@
     </div>
     <div id="map">
         <div id="map-controls">
-            <div id="filters" class="date-filters">
+            <!-- <div id="filters" class="date-filters">
                 <label><input type="checkbox" value="today"> Dzisiaj</label>
                 <label><input type="checkbox" value="yesterday"> Wczoraj</label>
                 <label><input type="checkbox" value="week"> Tydzień</label>
                 <label><input type="checkbox" value="month"> Miesiąc</label>
-              </div>
+              </div> -->
             <div id="search-container">
                 <input type="text" id="search-input" placeholder="Szukaj...">
                 <button id="search-button">
@@ -31,12 +31,18 @@
                 </button>
             </div>
             <div id="map-buttons">
-                <button class="filter-button">
+                <div class="filter-button">
                     <img src="icons/filter.svg" alt="filtruj" />
-                </button>
-                <button class="locate-user-button">
+                    <div id="filters" class="date-filters">
+                        <label><input type="checkbox" value="today"> Dzisiaj</label>
+                        <label><input type="checkbox" value="yesterday"> Wczoraj</label>
+                        <label><input type="checkbox" value="week"> Tydzień</label>
+                        <label><input type="checkbox" value="month"> Miesiąc</label>
+                    </div>
+                </div>
+                <div class="locate-user-button">
                     <img src="icons/location.svg" alt="lokalizuj" />
-                </button>
+                </div>
             </div>  
         </div>
     </div>
