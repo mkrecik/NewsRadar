@@ -301,6 +301,14 @@ p.popup-article-date {
     z-index: 9999;
 }
 
+#left-map-controls {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    z-index: 9999;
+  }
+  
+
 .zoom-in {
     background: url("icons/plus.svg") no-repeat center center;
     background-size: 30px 30px; 
@@ -403,3 +411,27 @@ p.popup-article-date {
     visibility: visible;
     pointer-events: auto;
 }
+
+.reset-view-button {
+    padding: 0;
+    width: 54px;
+    height: 54px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #E2E2E2;
+    border-radius: 999px;
+    box-shadow: 4px 4px 8px rgba(0,0,0,0.2);
+    cursor: pointer;
+    transition: transform 0.2s;
+  }
+  
+  .reset-view-button:hover,
+  .zoom-btn:hover {
+    transform: scale(1.05);
+  }
+  
+  .reset-view-button img {
+    width: 30px;
+    height: 30px;
+  }

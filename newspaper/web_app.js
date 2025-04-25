@@ -1,4 +1,4 @@
-var map = L.map('map').setView([52.237049, 21.017532], 7);
+var map = L.map('map').setView([52.03993467110199, 19.286734471610345], 7);
 // L.tileLayer('https://api.maptiler.com/maps/winter-v2/{z}/{x}/{y}.png?key=h7HjjXDoOt4QndexKLba', {
 //     attribution: '<a href="https://www.maptiler.com/copyright/" target="_blank">&copy; MapTiler</a> <a href="https://www.openstreetmap.org/copyright" target="_blank">&copy; OpenStreetMap contributors</a>'
 // }).addTo(map);
@@ -229,31 +229,20 @@ searchInput.addEventListener("keydown", (event) => {
 map.removeControl(map.zoomControl);
 
 // zoom in zoom out
-const CustomZoomControl = L.Control.extend({
-    onAdd: function (map) {
-        const container = L.DomUtil.create('div', 'custom-zoom-container');
-
-        const zoomIn = L.DomUtil.create('button', 'zoom-btn zoom-in', container);
-        const zoomOut = L.DomUtil.create('button', 'zoom-btn zoom-out', container);
-
-        L.DomEvent.on(zoomIn, 'click', function (e) {
-        e.stopPropagation();
-        map.zoomIn();
-        });
-
-        L.DomEvent.on(zoomOut, 'click', function (e) {
-        e.stopPropagation();
-        map.zoomOut();
-        });
-
-        return container;
-    },
-    onRemove: function () {}
+document.querySelector(".zoom-in").addEventListener("click", () => {
+  map.zoomIn();
 });
 
-map.addControl(new CustomZoomControl({ position: 'bottomleft' }));
+document.querySelector(".zoom-out").addEventListener("click", () => {
+  map.zoomOut();
+});
 
-// filter by date
+document.querySelector(".reset-view-button").addEventListener("click", () => {
+  map.setView([52.237049, 21.017532], 7);
+});
+
+
+// filtrowanie po dacie
 const filterBtn = document.querySelector(".filter-button");
 const filtersPanel = document.getElementById("filters");
 
@@ -386,8 +375,8 @@ function locateUser(map) {
         
         userLocationCircle = L.circle(e.latlng, {
             radius: e.accuracy,
-            color: '#136AEC',
-            fillColor: '#136AEC',
+            color: '#00314C',
+            fillColor: '#00314C',
             fillOpacity: 0.15
         }).addTo(map);
     });
@@ -401,6 +390,10 @@ function locateUser(map) {
 
 document.querySelector(".locate-user-button").addEventListener("click", () => {
   locateUser(map);
+});
+
+document.querySelector(".reset-view-button").addEventListener("click", () => {
+  map.setView([52.03993467110199, 19.286734471610345], 7);
 });
 
 
