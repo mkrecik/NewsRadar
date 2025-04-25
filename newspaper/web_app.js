@@ -109,11 +109,11 @@ function process_geometry(geometry, category, source, location, article, date) {
           const [lon, lat] = geometry.coordinates;
           const color = categoryColors[category] || "#000";
           const marker = L.circleMarker([lat, lon], {
-          radius: 5,
-          color: color,
-          fillColor: color,
-          fillOpacity: 0.8,
-          weight: 1
+            radius: 5,
+            color: color,
+            fillColor: color,
+            fillOpacity: 0.8,
+            weight: 1
           }).addTo(markerLayer);
           categoryLayers[category]?.addLayer(marker);
           marker.bindPopup(style_popup(category, source, location, date, article));
@@ -124,10 +124,10 @@ function process_geometry(geometry, category, source, location, article, date) {
         const polygon = L.polygon(
             geometry.coordinates.map(coord => coord.map(c => [c[1], c[0]])),
             {
-                color: color,
-                fillColor: color,
-                fillOpacity: 0.1,
-                weight: 2
+              color: color,
+              fillColor: color,
+              fillOpacity: 0.1,
+              weight: 2
             }
         ).addTo(polygonLayer);
         categoryLayers[category]?.addLayer(polygon);
@@ -140,10 +140,10 @@ function process_geometry(geometry, category, source, location, article, date) {
               const polygon = L.polygon(
                   polygonCoords.map(ring => ring.map(coord => [coord[1], coord[0]])),
                   {
-                      color: color,
-                      fillColor: color,
-                      fillOpacity: 0.1,
-                      weight: 2
+                    color: color,
+                    fillColor: color,
+                    fillOpacity: 0.1,
+                    weight: 2
                   }
               ).addTo(polygonLayer);
               categoryLayers[category]?.addLayer(polygon);
