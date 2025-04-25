@@ -252,14 +252,12 @@ def geocode(query):
     if object_class == 'boundary' and object_type == 'administrative' and geojson:
         geometry_type = geojson['type']
         result =  {
-            'geometry_type': geometry_type,
             'geometry': geojson,
             'center': {'lat': lat, 'lon': lon},
             'address': address
         }
     else:
         result = {
-            'geometry_type': 'Point',
             'geometry': {'type': 'Point', 'coordinates': [lon, lat]},
             'center': {'lat': lat, 'lon': lon},
             'address': address
@@ -273,7 +271,7 @@ def remove_polygon_geometries(collection):
     }):
         collection.update_one(
             {"_id": article["_id"]},
-            {"$unset": {"geocode_result.geometry": ""}}
+            {"$unset": {"geocode_result.geometry.coordinates": ""}}
         )
         print(f"Removed poligon: {article['title']}")
 
@@ -284,7 +282,7 @@ def remove_polska(collection):
     }):
         collection.update_one(
             {"_id": article["_id"]},
-            {"$unset": {"geocode_result.geometry": ""}}
+            {"$unset": {"geocode_result.geometry.coordinates": ""}}
         )
         print(f"Removed poligon geometry (Polska): {article['title']}")
 
@@ -369,7 +367,7 @@ def process_articles(site, whitelist, collection):
     article_urls = [url for url in article_urls if url not in existing_urls]
 
     articles_data = []
-    for i, article_url in enumerate(article_urls):
+    for i, article_url in enumerate(article_urls[:50]):
         try:
             print(f"[{i+1}/{len(article_urls)}] Processing: {article_url}")
 
@@ -494,7 +492,6 @@ def fix_category_order(collection):
     )
     print(f"Zaktualizowano {result.modified_count} artykułów.")
 
-
 def rebuild_polygons_from_articles(article_collection, polygon_collection):
     # Pobieranie tylko artykułów z geometrią typu Polygon/MultiPolygon
     articles = article_collection.find({
@@ -515,7 +512,7 @@ def rebuild_polygons_from_articles(article_collection, polygon_collection):
 
         # tylko jeśli faktycznie znowu Polygon lub MultiPolygon
         if (
-            geocode_result.get("geometry_type") in ["Polygon", "MultiPolygon"]
+            geocode_result.get("geometry.type") in ["Polygon", "MultiPolygon"]
             and "geometry" in geocode_result
         ):
             center = geocode_result["center"]
@@ -556,6 +553,35 @@ def delete_articles_without_geocode(collection):
     result = collection.delete_many({"geocode_result": None})
     print(f"Deleted {result.deleted_count} with no geocode result.")
 
+def fix_geometry_type(collection):
+    for article in collection.find():
+        geocode = article.get("geocode_result", {})
+        if not geocode:
+            continue
+        geometry = geocode.get("geometry")
+        geometry_type = geocode.get("geometrytype")
+
+        # Jeśli geometry istnieje i geometry_type istnieje
+        if geometry and geometry_type:
+            geometry['type'] = geometry_type
+            update_fields = {"geocode_result.geometry": geometry}
+        
+        # Jeśli nie ma geometry
+        elif not geometry and geometry_type:
+            geometry = {
+                "type": geometry_type
+            }
+            update_fields = {"geocode_result.geometry": geometry}
+        
+        else:
+            continue
+        
+        collection.update_one(
+            {"_id": article["_id"]},
+            {"$set": update_fields, "$unset": {"geocode_result.geometry_type": ""}}
+        )
+        print(f"Zaktualizowano geometry.type dla: {article['title']}")
+
 if __name__ == "__main__":
     articles_data = process_articles(site, whitelist, collection)
     # print_articles(site, whitelist)
@@ -578,6 +604,7 @@ if __name__ == "__main__":
     # update_category(collection)
     # rebuild_polygons_from_articles(collection, polygon_collection)
     # fix_category_order(collection)
+    # fix_geometry_type(collection)
 
 
 

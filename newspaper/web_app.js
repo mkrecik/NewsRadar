@@ -4,13 +4,13 @@ var map = L.map('map').setView([52.03993467110199, 19.286734471610345], 7);
 // }).addTo(map);
 
 const categoryIcons = {
-    "Wydarzenia": L.icon({ iconUrl: 'icons/wydarzenia.svg'}),
-    "Polityka": L.icon({ iconUrl: 'icons/polityka.svg'}),
-    "Gospodarka i Społeczeństwo": L.icon({ iconUrl: 'icons/gospodarka.svg'}),
-    "Kultura": L.icon({ iconUrl: 'icons/kultura.svg'}),
-    "Sport": L.icon({ iconUrl: 'icons/sport.svg'}),
-    "Pogoda i Natura": L.icon({ iconUrl: 'icons/pogoda.svg'}),
-    "Inne": L.icon({ iconUrl: 'icons/inne.svg'})
+    "Wydarzenia": L.icon({ iconUrl: 'lucide/wydarzenia.svg'}),
+    "Polityka": L.icon({ iconUrl: 'lucide/polityka.svg'}),
+    "Gospodarka i Społeczeństwo": L.icon({ iconUrl: 'lucide/gospodarka.svg'}),
+    "Kultura": L.icon({ iconUrl: 'lucide/kultura.svg'}),
+    "Sport": L.icon({ iconUrl: 'lucide/sport.svg'}),
+    "Pogoda i Natura": L.icon({ iconUrl: 'lucide/pogoda.svg'}),
+    "Inne": L.icon({ iconUrl: 'lucide/inne.svg'})
   };
 
 const categoryColors = {
@@ -40,6 +40,9 @@ function showArticles(articles) {
     markerLayer.clearLayers();
     polygonLayer.clearLayers();
     centroidLayer.clearLayers();
+
+    let pointsCount = 0;
+    let centroidsCount = 0;
   
     articles.forEach(article => {
         const geometry = article.geocode_result?.geometry;
@@ -51,11 +54,14 @@ function showArticles(articles) {
             address.city ||
             address.town ||
             address.village ||
+            address.municipality ||
             address.administrative ||
             address.state ||
             address.country ||
             address.continent ||
-            address.bay;
+            address.bay ||
+            address.road ||
+            address.river;
 
 
       let articleDate = "";
@@ -67,18 +73,26 @@ function showArticles(articles) {
         });
       }
 
-      // console.log('Artykuł:', {
-      //   geometry,
-      //   category,
-      //   source,
-      //   location,
-      //   articleDate
-      // });
+      console.log('Artykuł:', {
+        geometry,
+        category,
+        source,
+        location,
+        articleDate
+      });
+
+      const geometryType = geometry?.type;
+
+      if (geometryType === "Point") pointsCount++;
+      if (geometryType === "Polygon" || geometryType === "MultiPolygon") {
+          centroidsCount++;
+      }
   
       process_geometry(geometry, category, source, location, article, articleDate);
     });
+    
+    console.log(`Wyświetlono: ${pointsCount} punktów, ${centroidsCount} centroidów`);
   }
-
 
 let allArticles = [];
 // pobranie danych z backendu
@@ -90,28 +104,25 @@ fetch('http://127.0.0.1:8000/articles')
   });
 
 function process_geometry(geometry, category, source, location, article, date) {
-    if (!geometry) return;
+    if (geometry.coordinates) {
+      if (geometry.type === "Point") {
+          const [lon, lat] = geometry.coordinates;
+          const color = categoryColors[category] || "#000";
+          const marker = L.circleMarker([lat, lon], {
+          radius: 5,
+          color: color,
+          fillColor: color,
+          fillOpacity: 0.8,
+          weight: 1
+          }).addTo(markerLayer);
+          categoryLayers[category]?.addLayer(marker);
+          marker.bindPopup(style_popup(category, source, location, date, article));
+      }
 
-    if (geometry.type === "Point") {
-        const [lon, lat] = geometry.coordinates;
+      if (geometry.type === "Polygon") {
         const color = categoryColors[category] || "#000";
-        const marker = L.circleMarker([lat, lon], {
-        radius: 5,
-        color: color,
-        fillColor: color,
-        fillOpacity: 0.8,
-        weight: 1
-        }).addTo(markerLayer);
-        categoryLayers[category]?.addLayer(marker);
-        marker.bindPopup(style_popup(category, source, location, date, article));
-    }
-
-    if (geometry.type === "Polygon" || geometry.type === "MultiPolygon") {
-        const color = categoryColors[category] || "#000000";
         const polygon = L.polygon(
-            geometry.coordinates.map(ring =>
-                ring.map(coord => [coord[1], coord[0]])
-            ),
+            geometry.coordinates.map(coord => coord.map(c => [c[1], c[0]])),
             {
                 color: color,
                 fillColor: color,
@@ -119,8 +130,26 @@ function process_geometry(geometry, category, source, location, article, date) {
                 weight: 2
             }
         ).addTo(polygonLayer);
-        polygon.bindPopup(style_popup(category, source, location, date, article));
         categoryLayers[category]?.addLayer(polygon);
+        polygon.bindPopup(style_popup(category, source, location, date, article));
+      }
+
+      if (geometry.type === "MultiPolygon") {
+          const color = categoryColors[category] || "#000";
+          geometry.coordinates.forEach(polygonCoords => {
+              const polygon = L.polygon(
+                  polygonCoords.map(ring => ring.map(coord => [coord[1], coord[0]])),
+                  {
+                      color: color,
+                      fillColor: color,
+                      fillOpacity: 0.1,
+                      weight: 2
+                  }
+              ).addTo(polygonLayer);
+              categoryLayers[category]?.addLayer(polygon);
+              polygon.bindPopup(style_popup(category, source, location, date, article));
+          });
+        }
     }
 
     // polygon centroids
@@ -365,20 +394,20 @@ document.querySelectorAll('.date-filter-btn').forEach(btn => {
 let userLocationCircle = null;
 
 function locateUser(map) {
-    map.locate({ setView: true, maxZoom: 16 });
+    map.locate({ setView: true, maxZoom: 13 });
 
     map.once('locationfound', (e) => {
-        // Usuń poprzedni okrąg, jeśli istnieje
-        if (userLocationCircle) {
-            map.removeLayer(userLocationCircle);
-        }
-        
-        userLocationCircle = L.circle(e.latlng, {
-            radius: e.accuracy,
-            color: '#00314C',
-            fillColor: '#00314C',
-            fillOpacity: 0.15
-        }).addTo(map);
+        // // Usuń poprzedni okrąg, jeśli istnieje
+        // if (userLocationCircle) {
+        //     map.removeLayer(userLocationCircle);
+        // }
+        // //rysuj okrag
+        // userLocationCircle = L.circle(e.latlng, {
+        //     radius: e.accuracy,
+        //     color: '#00314C',
+        //     fillColor: '#00314C',
+        //     fillOpacity: 0.15
+        // }).addTo(map);
     });
 
   map.once('locationerror', (e) => {
@@ -400,15 +429,15 @@ document.querySelector(".reset-view-button").addEventListener("click", () => {
 var baseLayers = {
   "CartoDB": L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
     maxZoom: 19,
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+    attribution: '&copy; <a href="https://carto.com/attributions">CARTO</a>'
   }).addTo(map),
   "OpenStreetMap": L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
   }),
   "MapTiler": L.tileLayer('https://api.maptiler.com/maps/winter-v2/{z}/{x}/{y}.png?key=h7HjjXDoOt4QndexKLba', {
-      maxZoom: 19,
-      attribution: '&copy; <a href="https://www.maptiler.com/copyright/" target="_blank">MapTiler</a> &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>'
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.maptiler.com/copyright/" target="_blank">MapTiler</a>'
   }),
 };
 
