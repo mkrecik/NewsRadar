@@ -1,7 +1,7 @@
 var map = L.map('map').setView([52.237049, 21.017532], 7);
-L.tileLayer('https://api.maptiler.com/maps/winter-v2/{z}/{x}/{y}.png?key=h7HjjXDoOt4QndexKLba', {
-    attribution: '<a href="https://www.maptiler.com/copyright/" target="_blank">&copy; MapTiler</a> <a href="https://www.openstreetmap.org/copyright" target="_blank">&copy; OpenStreetMap contributors</a>'
-}).addTo(map);
+// L.tileLayer('https://api.maptiler.com/maps/winter-v2/{z}/{x}/{y}.png?key=h7HjjXDoOt4QndexKLba', {
+//     attribution: '<a href="https://www.maptiler.com/copyright/" target="_blank">&copy; MapTiler</a> <a href="https://www.openstreetmap.org/copyright" target="_blank">&copy; OpenStreetMap contributors</a>'
+// }).addTo(map);
 
 const categoryIcons = {
     "Wydarzenia": L.icon({ iconUrl: 'icons/wydarzenia.svg'}),
@@ -66,6 +66,14 @@ function showArticles(articles) {
           day: '2-digit'
         });
       }
+
+      // console.log('Artykuł:', {
+      //   geometry,
+      //   category,
+      //   source,
+      //   location,
+      //   articleDate
+      // });
   
       process_geometry(geometry, category, source, location, article, articleDate);
     });
@@ -80,48 +88,6 @@ fetch('http://127.0.0.1:8000/articles')
     allArticles = data; // zapisz do zmiennej
     showArticles(data); // wyświetl wszystko na start
   });
-    
-
-// // pobranie danych z backendu
-// fetch('http://127.0.0.1:8000/articles')
-//   .then(response => response.json())
-//   .then(data => {
-//     data.forEach(article => {
-//       const geometry = article.geocode_result?.geometry;
-//       const category = article.category;
-//       const src = article.source;
-//       const source = src.replace(/^https?:\/\//, "");
-//       const address = article.geocode_result.address;
-//       const location =
-//         address.city ||
-//         address.town ||
-//         address.village ||
-//         address.administrative ||
-//         address.state ||
-//         address.country ||
-//         address.continent;
-      
-//       let articleDate = "";
-//       if (article.date) {
-//         articleDate = new Date(article.date).toLocaleDateString('pl-PL', {
-//             year: 'numeric',
-//             month: '2-digit',
-//             day: '2-digit'
-//         });
-//       } 
-//       console.log('Artykuł:', {
-//         geometry,
-//         category,
-//         source,
-//         location,
-//         articleDate
-//       });
-      
-//       process_geometry(geometry, category, source, location, article, articleDate);
-//     });
-//   })
-//   .catch(error => console.error('Błąd podczas ładowania artykułów:', error));
-
 
 function process_geometry(geometry, category, source, location, article, date) {
     if (!geometry) return;
@@ -439,14 +405,18 @@ document.querySelector(".locate-user-button").addEventListener("click", () => {
 
 
 var baseLayers = {
-    "MapTiler": L.tileLayer('https://api.maptiler.com/maps/winter-v2/{z}/{x}/{y}.png?key=h7HjjXDoOt4QndexKLba', {
-        maxZoom: 19
-        // attribution: '&copy; <a href="https://www.maptiler.com/copyright/" target="_blank">MapTiler</a> &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>'
-    }).addTo(map),
-    "OpenStreetMap": L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19
-        // attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-    })
+  "CartoDB": L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+  }).addTo(map),
+  "OpenStreetMap": L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+  }),
+  "MapTiler": L.tileLayer('https://api.maptiler.com/maps/winter-v2/{z}/{x}/{y}.png?key=h7HjjXDoOt4QndexKLba', {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.maptiler.com/copyright/" target="_blank">MapTiler</a> &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>'
+  }),
 };
 
 var overlays = {
