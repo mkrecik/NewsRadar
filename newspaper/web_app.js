@@ -36,6 +36,8 @@ const markerLayer = L.layerGroup().addTo(map);
 const polygonLayer = L.layerGroup().addTo(map);
 const centroidLayer = L.layerGroup().addTo(map);
 
+let activeCategories = new Set(Object.keys(categoryLayers));
+
 function showArticles(articles) {
     markerLayer.clearLayers();
     polygonLayer.clearLayers();
@@ -98,7 +100,7 @@ function showArticles(articles) {
         return geometryType === "Polygon" || geometryType === "MultiPolygon";
     });
   
-    populateSidebarWithPolygons(polygonArticles);
+    updateSidebar();
   }
 
 let allArticles = [];
@@ -211,20 +213,23 @@ const CategoryToggleControl = L.Control.extend({
             btn.classList.add('active');
 
             btn.onclick = function() {
-                const cat = this.dataset.category;
-                const isActive = this.classList.contains('active');
-
-                if (isActive) {
-                    map.removeLayer(categoryLayers[cat]);
-                    this.classList.remove('active');
-                    this.classList.add('inactive');
-                } else {
-                    map.addLayer(categoryLayers[cat]);
-                    this.classList.add('active');
-                    this.classList.remove('inactive');
-                }
-                
-            };
+              const cat = this.dataset.category;
+              const isActive = this.classList.contains('active');
+          
+              if (isActive) {
+                  map.removeLayer(categoryLayers[cat]);
+                  this.classList.remove('active');
+                  this.classList.add('inactive');
+                  activeCategories.delete(cat);
+              } else {
+                  map.addLayer(categoryLayers[cat]);
+                  this.classList.add('active');
+                  this.classList.remove('inactive');
+                  activeCategories.add(cat);  
+              }
+          
+              updateSidebar();
+          };
         });
 
         return div;
@@ -472,13 +477,28 @@ function addArticleToSidebar(article) {
   const articleDiv = document.createElement('div');
   articleDiv.className = 'sidebar-article';
 
+  const address = article.geocode_result?.address || {};
+  const location =
+    address.city ||
+    address.town ||
+    address.village ||
+    address.municipality ||
+    address.administrative ||
+    address.state ||
+    address.country ||
+    address.continent ||
+    address.bay ||
+    address.road ||
+    address.river;
+
+
   articleDiv.innerHTML = `
       <div class="popup-article">
           <a href="${article.url}" target="_blank"><h3 class="popup-article-title">${article.title}</h3></a>
           <div class="popup-article-info">
               <div class="popup-tags">
                   <p class="popup-article-category" style="background-color: ${color};">${article.category}</p>
-                  <p class="popup-article-location">${article.geocode_result.address.city || article.geocode_result.address.town || article.geocode_result.address.village || 'Nieznana lokalizacja'}</p>
+                  <p class="popup-article-location">${location}</p>
                   <p class="popup-article-source">${article.source.replace(/^https?:\/\//, '')}</p>
               </div>
               <p class="popup-article-date">${article.date ? new Date(article.date).toLocaleDateString('pl-PL', { year: 'numeric', month: '2-digit', day: '2-digit' }) : 'Brak daty'}</p>
@@ -490,7 +510,6 @@ function addArticleToSidebar(article) {
   sidebarContent.appendChild(articleDiv);
 }
 
-
 function populateSidebarWithPolygons(articles) {
   const sidebarContent = document.querySelector('.sidebar-content');
   sidebarContent.innerHTML = ''; // wyczyść wcześniej
@@ -501,5 +520,26 @@ function populateSidebarWithPolygons(articles) {
       if (geometryType === "Polygon" || geometryType === "MultiPolygon") {
           addArticleToSidebar(article);
       }
+  });
+}
+
+function updateSidebar() {
+  const sidebarContent = document.querySelector('.sidebar-content');
+  sidebarContent.innerHTML = '';
+
+  const filteredArticles = allArticles
+  .filter(article => {
+    return activeCategories.has(article.category) && 
+      (article.geocode_result?.geometry?.type === "Polygon" || 
+       article.geocode_result?.geometry?.type === "MultiPolygon");
+  })
+  .sort((a, b) => {
+    const dateA = new Date(a.date);
+    const dateB = new Date(b.date);
+    return dateB - dateA; // najnowsze na górze
+  });
+
+  filteredArticles.forEach(article => {
+      addArticleToSidebar(article);
   });
 }

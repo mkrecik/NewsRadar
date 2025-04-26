@@ -389,7 +389,7 @@ def process_articles(site, whitelist, collection):
             if not summary or summary == "":
                 summary = extract_summary(soup)
                 if not summary or summary == "":
-                    summary = a.text[:200]
+                    summary = f"{a.text[:250]}..."
 
             location = extract_location(a.text) 
             if location.strip().lower().rstrip('.') == "brak":
@@ -447,6 +447,37 @@ def update_geocode(collection):
                     {"$set": {"geocode_result": geocode_result}}
                 )
                 print(f"Zaktualizowano geokodowanie dla: {article['title']}")
+
+def update_summary(collection):
+    for article in collection.find():
+        url = article.get("url")
+        if not url:
+            continue
+
+        try:
+            response = requests.get(url, timeout=10)
+            soup = BeautifulSoup(response.content, "html.parser")
+            summary = extract_summary(soup)
+
+            # Jeśli dalej nie ma podsumowania, fallback na fragment tekstu
+            if not summary:
+                a = Article(url, language="pl")
+                a.download()
+                a.parse()
+                summary = f"{a.text[:250]}..." if a.text else ""
+
+            if summary:
+                collection.update_one(
+                    {"_id": article["_id"]},
+                    {"$set": {"summary": summary}}
+                )
+                print(f"Zaktualizowano podsumowanie dla: {article['title']}")
+            else:
+                print(f"Brak treści dla: {url}")
+
+        except Exception as e:
+            print(f"Błąd podczas aktualizacji podsumowania dla: {url}\n{e}")
+
 
 def update_category(collection):
     for article in collection.find():
@@ -583,18 +614,18 @@ def fix_geometry_type(collection):
         print(f"Zaktualizowano geometry.type dla: {article['title']}")
 
 if __name__ == "__main__":
-    articles_data = process_articles(site, whitelist, collection)
-    # print_articles(site, whitelist)
+    # articles_data = process_articles(site, whitelist, collection)
+    # # print_articles(site, whitelist)
 
-    # # Save articles to json
-    # with open(r"article_json/interia_gemini2404.json", "w", encoding="utf-8") as f:
-    #     json.dump(articles_data, f, ensure_ascii=False, indent=4)
-    # print(f"Saved to json.")
+    # # # Save articles to json
+    # # with open(r"article_json/interia_gemini2404.json", "w", encoding="utf-8") as f:
+    # #     json.dump(articles_data, f, ensure_ascii=False, indent=4)
+    # # print(f"Saved to json.")
 
-    # Save to MongoDB
-    if articles_data:
-        collection.insert_many(articles_data)
-        print(f"Saved {len(articles_data)} articles to MongoDB.")
+    # # Save to MongoDB
+    # if articles_data:
+    #     collection.insert_many(articles_data)
+    #     print(f"Saved {len(articles_data)} articles to MongoDB.")
 
     # remove_polygon_geometries(collection)
     # remove_polska(collection)
@@ -605,6 +636,7 @@ if __name__ == "__main__":
     # rebuild_polygons_from_articles(collection, polygon_collection)
     # fix_category_order(collection)
     # fix_geometry_type(collection)
+    update_summary(collection)
 
 
 
