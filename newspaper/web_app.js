@@ -92,6 +92,13 @@ function showArticles(articles) {
     });
     
     console.log(`Wyświetlono: ${pointsCount} punktów, ${centroidsCount} centroidów`);
+
+    const polygonArticles = articles.filter(article => {
+        const geometryType = article.geocode_result?.geometry?.type;
+        return geometryType === "Polygon" || geometryType === "MultiPolygon";
+    });
+  
+    populateSidebarWithPolygons(polygonArticles);
   }
 
 let allArticles = [];
@@ -457,3 +464,42 @@ if (leafletLayersControl && customContainer) {
   customContainer.appendChild(leafletLayersControl);
 }
 
+function addArticleToSidebar(article) {
+  const sidebarContent = document.querySelector('.sidebar-content');
+
+  const color = categoryColors[article.category] || "#000000";
+  
+  const articleDiv = document.createElement('div');
+  articleDiv.className = 'sidebar-article';
+
+  articleDiv.innerHTML = `
+      <div class="popup-article">
+          <a href="${article.url}" target="_blank"><h3 class="popup-article-title">${article.title}</h3></a>
+          <div class="popup-article-info">
+              <div class="popup-tags">
+                  <p class="popup-article-category" style="background-color: ${color};">${article.category}</p>
+                  <p class="popup-article-location">${article.geocode_result.address.city || article.geocode_result.address.town || article.geocode_result.address.village || 'Nieznana lokalizacja'}</p>
+                  <p class="popup-article-source">${article.source.replace(/^https?:\/\//, '')}</p>
+              </div>
+              <p class="popup-article-date">${article.date ? new Date(article.date).toLocaleDateString('pl-PL', { year: 'numeric', month: '2-digit', day: '2-digit' }) : 'Brak daty'}</p>
+          </div>
+          <p class="popup-article-summary">${article.summary}</p>
+      </div>
+  `;
+
+  sidebarContent.appendChild(articleDiv);
+}
+
+
+function populateSidebarWithPolygons(articles) {
+  const sidebarContent = document.querySelector('.sidebar-content');
+  sidebarContent.innerHTML = ''; // wyczyść wcześniej
+
+  articles.forEach(article => {
+      const geometryType = article.geocode_result?.geometry?.type;
+
+      if (geometryType === "Polygon" || geometryType === "MultiPolygon") {
+          addArticleToSidebar(article);
+      }
+  });
+}
