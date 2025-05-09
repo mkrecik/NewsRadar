@@ -11,7 +11,7 @@ body {
 }
 
 .sidebar {
-    flex: 0 0 20%;
+    flex: 0 0 22%;
     background-color: #E2E2E2;
     box-shadow: 4px 0px 4px 0px rgba(0, 0, 0, 0.25);
     z-index: 900;
@@ -54,12 +54,13 @@ a {
 }
 
 .popup-article-title {
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 700;
     color: #000000;
     text-decoration: underline 1px black;
     text-underline-offset: 2px;
-    margin-bottom: 8px;
+    margin-bottom: 5px;
+    margin-top: 5px
 }
 
 .popup-article-info {
@@ -91,7 +92,7 @@ p.popup-article-source {
     margin: 0;
     padding: 0;
     align-items: center;
-    max-width: 80%;
+    max-width: 77%;
 }
 
 .popup-article-category {
@@ -116,18 +117,19 @@ p.popup-article-date {
     padding: 0;
     padding-top: 2px;
     margin: 0;
+    max-width: 50px;
 }
 
-.popup-article-summary {
+p.popup-article-summary {
     color: #00314C;
     font-family: "Alegreya", serif;
-    font-size: 13px;
+    font-size: 12px;
     font-style: normal;
     font-weight: 500;
     line-height: 125%;
     letter-spacing: -0.11px;
     padding: 0;
-    margin-top: 4px;
+    margin-top: 16px;
     gap: 4px;
     /* padding: 5px 0; */
 }
@@ -146,7 +148,7 @@ p.popup-article-date {
     justify-content: flex-end; 
     align-items: center; 
     text-align: right;
-    font-size: 14px;
+    font-size: 13px;
     font-style: normal;
     font-weight: 500;
     width: auto;
@@ -201,7 +203,7 @@ p.popup-article-date {
     border: none;
     outline: none;
     padding: 5px 15px;
-    font-size: 16px;
+    font-size: 14px;
     background: none;
     width: 200px;
     font-family: "Alegreya", serif;
@@ -254,7 +256,7 @@ p.popup-article-date {
     cursor: pointer;
     transition: transform 0.2s;
     font-family: "Alegreya", serif;
-    font-size: 14px;
+    font-size: 13px;
 }
 
 .filter-button:hover, .locate-user-button:hover {
@@ -340,7 +342,7 @@ p.popup-article-date {
     display: flex;
     align-items: center;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 13px;
     gap: 8px;
     user-select: none;
 }
@@ -430,6 +432,7 @@ p.popup-article-date {
     border-radius: 10px;
     padding: 20px;
     padding-top: 10px;
+    padding-bottom: 15px;
     box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.2);
     /* cursor: pointer; */
 }
@@ -443,4 +446,5 @@ p.popup-article-date {
 .sidebar-article-summary {
     font-size: 14px;
     color: #555;
+    margin-top: 10px;
 }
