@@ -2,7 +2,7 @@ html, body, #map {
     width: 100%;
     height: 100%;
     margin: 0;
-    font-family: Alegreya, serif;
+    font-family: "Alegreya", serif;
 }
 
 body {
@@ -120,7 +120,7 @@ p.popup-article-date {
 
 .popup-article-summary {
     color: #00314C;
-    font-family: Alegreya;
+    font-family: "Alegreya", serif;
     font-size: 13px;
     font-style: normal;
     font-weight: 500;
@@ -204,7 +204,7 @@ p.popup-article-date {
     font-size: 16px;
     background: none;
     width: 200px;
-    font-family: Alegreya, serif;
+    font-family: "Alegreya", serif;
     padding-left: 0;
 }
  
@@ -253,7 +253,7 @@ p.popup-article-date {
     box-shadow: 4px 4px 8px rgba(0,0,0,0.2) !important;
     cursor: pointer;
     transition: transform 0.2s;
-    font-family: Alegreya, serif;
+    font-family: "Alegreya", serif;
     font-size: 14px;
 }
 
@@ -351,7 +351,7 @@ p.popup-article-date {
     height: 20px;
     border: 1px solid #00314C;
     font-size: 14px;
-    font-family: Alegreya;
+    font-family: "Alegreya", serif;
     border-radius: 50%;
     position: relative;
     background-color: white;
@@ -392,7 +392,7 @@ p.popup-article-date {
     pointer-events: auto;
 }
 
-.reset-view-button {
+.reset-view-button, .info-button {
     padding: 0;
     width: 54px;
     height: 54px;
@@ -407,13 +407,13 @@ p.popup-article-date {
 }
   
 .reset-view-button:hover,
-.zoom-btn:hover {
-transform: scale(1.05);
+.zoom-btn:hover, .info-button:hover {
+    transform: scale(1.05);
 }
 
-.reset-view-button img {
-width: 30px;
-height: 30px;
+.reset-view-button img, .info-button img {
+    width: 30px;
+    height: 30px;
 }
 
 .sidebar-content {

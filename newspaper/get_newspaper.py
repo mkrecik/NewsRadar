@@ -614,18 +614,18 @@ def fix_geometry_type(collection):
         print(f"Zaktualizowano geometry.type dla: {article['title']}")
 
 if __name__ == "__main__":
-    # articles_data = process_articles(site, whitelist, collection)
-    # # print_articles(site, whitelist)
+    articles_data = process_articles(site, whitelist, collection)
+    # print_articles(site, whitelist)
 
-    # # # Save articles to json
-    # # with open(r"article_json/interia_gemini2404.json", "w", encoding="utf-8") as f:
-    # #     json.dump(articles_data, f, ensure_ascii=False, indent=4)
-    # # print(f"Saved to json.")
+    # # Save articles to json
+    # with open(r"article_json/interia_gemini2404.json", "w", encoding="utf-8") as f:
+    #     json.dump(articles_data, f, ensure_ascii=False, indent=4)
+    # print(f"Saved to json.")
 
-    # # Save to MongoDB
-    # if articles_data:
-    #     collection.insert_many(articles_data)
-    #     print(f"Saved {len(articles_data)} articles to MongoDB.")
+    # Save to MongoDB
+    if articles_data:
+        collection.insert_many(articles_data)
+        print(f"Saved {len(articles_data)} articles to MongoDB.")
 
     # remove_polygon_geometries(collection)
     # remove_polska(collection)
@@ -636,7 +636,7 @@ if __name__ == "__main__":
     # rebuild_polygons_from_articles(collection, polygon_collection)
     # fix_category_order(collection)
     # fix_geometry_type(collection)
-    update_summary(collection)
+    # update_summary(collection)
 
 
 
