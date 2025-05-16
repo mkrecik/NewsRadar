@@ -177,6 +177,10 @@ document.querySelector(".zoom-in").addEventListener("click", () => map.zoomIn())
 document.querySelector(".zoom-out").addEventListener("click", () => map.zoomOut());
 document.querySelector(".reset-view-button").addEventListener("click", () => map.setView([52.03993467110199, 19.286734471610345], 7));
 document.querySelector(".locate-user-button").addEventListener("click", () => locateUser(map));
+document.querySelector(".info-button").addEventListener("click", () => {
+  const infoDiv = document.querySelector('.info-container');
+  infoDiv.style.display = infoDiv.style.display === 'none' ? 'block' : 'none';
+});
 
 // Search location
 const searchInput = document.getElementById("search-input");

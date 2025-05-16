@@ -43,21 +43,43 @@
             </div>  
         </div>
         <div id="left-map-controls">
-            <div class="custom-zoom-container">
-                <button class="zoom-btn zoom-in">
-                    <img src="icons/plus.svg" alt="przybliż" />
-                </button>
-                <button class="zoom-btn zoom-out">
-                    <img src="icons/minus.svg" alt="przybliż" />
-                </button>
-            <div class="reset-view-button">
-                <img src="lucide/house.svg" alt="resetuj widok" />
+            <div class="left-map-controls-container">
+                <div class="custom-zoom-container">
+                    <button class="zoom-btn zoom-in">
+                        <img src="icons/plus.svg" alt="przybliż" />
+                    </button>
+                    <button class="zoom-btn zoom-out">
+                        <img src="icons/minus.svg" alt="przybliż" />
+                    </button>
+                <div class="reset-view-button">
+                    <img src="lucide/house.svg" alt="resetuj widok" />
+                </div>
+                <div class="info-button">
+                    <img src="lucide/info.svg" alt="resetuj widok" />
+                </div>
             </div>
-            <div class="info-button">
-                <img src="lucide/info.svg" alt="resetuj widok" />
+            <div class="info-container">
+                <div class="info-content">
+                    <div class ="info-header">
+                        <h2 class="info-header-title">Informacje</h2>
+                        <button class="close-info-button" onclick="document.querySelector('.info-container').style.display = 'none';">×</button>
+                    </div>             
+                    <p>Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.</p>
+                    <div class="info-footer">
+                        <div class="info-footer-left">
+                            <img class="info-logo" src="images/logo.svg" alt="telefon" />
+                            <p>2025</p>
+                            
+                        </div>
+                        <div class="info-footer-right">
+                            <p>Kontakt: mail@gmail.com</p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
-        </div>
+
+ 
     </div>
     <script type="module" src = "web_app.js"></script>
 </body>
