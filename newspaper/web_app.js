@@ -173,6 +173,7 @@ const CategoryToggleControl = L.Control.extend({
 map.addControl(new CategoryToggleControl({ position: 'bottomright' }));
 
 // Zoom, reset, locate buttons
+map.removeControl(map.zoomControl);
 document.querySelector(".zoom-in").addEventListener("click", () => map.zoomIn());
 document.querySelector(".zoom-out").addEventListener("click", () => map.zoomOut());
 document.querySelector(".reset-view-button").addEventListener("click", () => map.setView([52.03993467110199, 19.286734471610345], 7));
