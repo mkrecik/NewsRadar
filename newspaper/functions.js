@@ -1,11 +1,4 @@
-const categoryColors = {
-    "Wydarzenia": "#660001",
-    "Polityka": "#990001",
-    "Gospodarka i Społeczeństwo": "#CC0002",
-    "Sport": "#0D5F8C",
-    "Kultura": "#4E8CB0",
-    "Pogoda i Natura": "#00314C",
-  };
+import { categoryColors } from './constants.js';
 
 export function handleSearch(searchInput, map) {
     const query = searchInput.value;
