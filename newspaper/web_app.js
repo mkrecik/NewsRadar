@@ -14,7 +14,7 @@ map.getPane('centroids').style.zIndex = 500;
 
 const markerLayer = L.layerGroup().addTo(map);
 const polygonLayer = L.layerGroup().addTo(map);
-const centroidLayer = L.layerGroup().addTo(map);
+const centroidLayer = L.layerGroup();
 
 let activeCategories = new Set(Object.keys(categoryLayers));
 let allArticles = [];
@@ -139,6 +139,7 @@ fetch('http://127.0.0.1:8000/articles')
     const filtered = getFilteredArticles();
     showArticles(filtered);
     updateSidebarWithArticles(filtered);
+    updateInfoBox(filtered);
   });
 
 // Category layers toggle
@@ -356,4 +357,20 @@ function getFilteredArticles() {
 
     return match;
   });
+}
+
+// Update articles count in info
+function updateInfoBox(articles) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const todayCount = articles.filter(article => {
+    if (!article.date) return false;
+    const articleDate = new Date(article.date);
+    articleDate.setHours(0, 0, 0, 0);
+    return articleDate.getTime() === today.getTime();
+  }).length;
+
+  document.getElementById("today_articles").innerText = `${todayCount}`;
+  document.getElementById("total_articles").innerText = `${articles.length}`;
 }
