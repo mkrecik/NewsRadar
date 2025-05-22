@@ -21,7 +21,7 @@ export const categoryIcons = {
     "Kultura": L.icon({ iconUrl: 'lucide/kultura.svg'}),
     "Sport": L.icon({ iconUrl: 'lucide/sport.svg'}),
     "Pogoda i Natura": L.icon({ iconUrl: 'lucide/pogoda.svg'}),
-    "Inne": L.icon({ iconUrl: 'lucide/inne.svg'})
+    // "Inne": L.icon({ iconUrl: 'lucide/inne.svg'})
   };
 
 export const categoryColors = {
@@ -40,5 +40,5 @@ export const categoryLayers = {
     "Sport": L.layerGroup(),
     "Kultura": L.layerGroup(),
     "Pogoda i Natura": L.layerGroup(),
-    "Inne": L.layerGroup()
+    // "Inne": L.layerGroup()
 };
