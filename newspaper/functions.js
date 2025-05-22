@@ -36,7 +36,11 @@ export function style_popup(category, source, location, date, article) {
 }
 
 export function locateUser(map) {
-    map.locate({ setView: true, maxZoom: 13 });
+  map.locate({ setView: false, watch: false });
+
+    map.once('locationfound', function (e) {
+      map.setView(e.latlng, 12);
+  });
   
     map.once('locationerror', (e) => {
         alert("Nie udało się pobrać lokalizacji: " + e.message);
