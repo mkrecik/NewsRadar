@@ -469,6 +469,12 @@ p.popup-article-summary {
     flex-direction: column;
 }
 
+.info-text p {
+    font-size: 13px;
+    line-height: 1.5;
+    margin-bottom: 7px;
+}
+
 .info-header {
     display: flex;
     align-items: center;
