@@ -3,6 +3,15 @@ import { baseLayers, categoryIcons, categoryColors, categoryLayers } from './con
 
 var map = L.map('map').setView([52.03993467110199, 19.286734471610345], 7);
 
+map.createPane('polygons');
+map.getPane('polygons').style.zIndex = 400;
+
+map.createPane('points');
+map.getPane('points').style.zIndex = 600;
+
+map.createPane('centroids');
+map.getPane('centroids').style.zIndex = 500;
+
 const markerLayer = L.layerGroup().addTo(map);
 const polygonLayer = L.layerGroup().addTo(map);
 const centroidLayer = L.layerGroup().addTo(map);
@@ -61,6 +70,7 @@ function process_geometry(geometry, category, source, location, article, date, s
     if (geometry.type === "Point" && showPoints) {
       const [lon, lat] = geometry.coordinates;
       const marker = L.circleMarker([lat, lon], {
+        pane: 'points',
         radius: 5,
         color: color,
         fillColor: color,
@@ -75,6 +85,7 @@ function process_geometry(geometry, category, source, location, article, date, s
       const polygon = L.polygon(
         geometry.coordinates.map(coord => coord.map(c => [c[1], c[0]])),
         {
+          pane: 'polygons',
           color: color,
           fillColor: color,
           fillOpacity: 0.1,
@@ -90,6 +101,7 @@ function process_geometry(geometry, category, source, location, article, date, s
         const polygon = L.polygon(
           polygonCoords.map(ring => ring.map(coord => [coord[1], coord[0]])),
           {
+            pane: 'polygons',
             color: color,
             fillColor: color,
             fillOpacity: 0.1,
@@ -106,6 +118,7 @@ function process_geometry(geometry, category, source, location, article, date, s
     const center = article.geocode_result?.center;
     if (center) {
       const marker = L.circleMarker([center.lat, center.lon], {
+        pane: 'centroids',
         radius: 5,
         color: color,
         fillColor: color,
