@@ -13,9 +13,8 @@ map.createPane('centroids');
 map.getPane('centroids').style.zIndex = 500;
 
 const markerLayer = L.layerGroup().addTo(map);
-const polygonLayer = L.layerGroup().addTo(map);
+const polygonLayer = L.layerGroup();
 const centroidLayer = L.layerGroup();
-
 
 let activeCategories = new Set(Object.keys(categoryLayers));
 let allArticles = [];
@@ -137,10 +136,15 @@ fetch('http://127.0.0.1:8000/articles')
   .then(response => response.json())
   .then(data => {
     allArticles = data;
-    const filtered = getFilteredArticles();
-    showArticles(filtered);
-    updateSidebarWithArticles(filtered);
-    updateInfoBox(filtered);
+    const filteredForSidebar = getFilteredArticles();
+    updateSidebarWithArticles(filteredForSidebar);
+
+    const mapArticles = allArticles.filter(article =>
+      activeCategories.has(article.category)
+    );
+    showArticles(mapArticles);
+
+    updateInfoBox(allArticles);
   });
 
 // Category layers toggle
@@ -175,9 +179,14 @@ const CategoryToggleControl = L.Control.extend({
         }
       
         // Update articles based on active categories
-        const filtered = getFilteredArticles();
-        showArticles(filtered);
-        updateSidebarWithArticles(filtered);
+        const filteredForSidebar = getFilteredArticles();
+        updateSidebarWithArticles(filteredForSidebar);
+
+        const mapArticles = allArticles.filter(article =>
+          activeCategories.has(article.category)
+        );
+        showArticles(mapArticles);
+
       };
       
     });
@@ -198,9 +207,16 @@ document.querySelector(".info-button").addEventListener("click", () => {
   infoDiv.style.display = infoDiv.style.display === 'none' ? 'block' : 'none';
 });
 
+let mapZoomLevel = map.getZoom();
+let mapLocationFilter = {};
+
 // Search location
 const searchInput = document.getElementById("search-input");
 const searchButton = document.getElementById("search-button");
+
+// Date filters
+const filters = { today: false, yesterday: false, week: false, month: false, all: true };
+const filtersDiv = document.getElementById("filters");
 
 searchButton.addEventListener("click", handleSearch);
 searchInput.addEventListener("keydown", (event) => {
@@ -213,17 +229,25 @@ searchInput.addEventListener("keydown", (event) => {
 // Layer control
 map.on('overlayadd', function(e) {
   if (e.layer === polygonLayer || e.layer === markerLayer || e.layer === centroidLayer) {
-    const filtered = getFilteredArticles();
-    showArticles(filtered);
-    updateSidebarWithArticles(filtered);
+    const filteredForSidebar = getFilteredArticles();
+    updateSidebarWithArticles(filteredForSidebar);
+
+    const mapArticles = allArticles.filter(article =>
+      activeCategories.has(article.category)
+    );
+    showArticles(mapArticles);
   }
 });
 
 map.on('overlayremove', function(e) {
   if (e.layer === polygonLayer || e.layer === markerLayer || e.layer === centroidLayer) {
-    const filtered = getFilteredArticles();
-    showArticles(filtered);
-    updateSidebarWithArticles(filtered);
+    const filteredForSidebar = getFilteredArticles();
+    updateSidebarWithArticles(filteredForSidebar);
+
+    const mapArticles = allArticles.filter(article =>
+      activeCategories.has(article.category)
+    );
+    showArticles(mapArticles);
   }
 });
 
@@ -256,9 +280,11 @@ window.addEventListener('DOMContentLoaded', () => {
   const sidebar = document.querySelector('.sidebar');
   const resizer = document.getElementById('sidebar-resizer');
 
-  // ustaw poprawnie pozycję resizera
-  const initialWidth = sidebar.offsetWidth;
+  const windowWidth = window.innerWidth;
+  const initialWidth = Math.min(Math.max(windowWidth * 0.22, 250), 1000);
+  sidebar.style.flex = `0 0 ${initialWidth}px`;
   resizer.style.left = `${initialWidth}px`;
+
 
   let isResizing = false;
 
@@ -271,7 +297,10 @@ window.addEventListener('DOMContentLoaded', () => {
     if (!isResizing) return;
     const newWidth = Math.min(Math.max(e.clientX, 250), 1000);
     sidebar.style.flex = `0 0 ${newWidth}px`;
-    resizer.style.left = `${newWidth}px`;
+
+    const actualWidth = sidebar.getBoundingClientRect().width;
+    resizer.style.left = `${actualWidth}px`;
+
   });
 
   document.addEventListener('mouseup', () => {
@@ -279,7 +308,6 @@ window.addEventListener('DOMContentLoaded', () => {
     document.body.style.cursor = 'default';
   });
 });
-
 
 // Sidebar
 function addArticleToSidebar(article) {
@@ -321,12 +349,14 @@ function updateSidebarWithArticles(articles) {
     .sort((a, b) => new Date(b.date) - new Date(a.date));
 
   filteredArticles.forEach(addArticleToSidebar);
+
+  const sidebar = document.querySelector('.sidebar');
+  const resizer = document.getElementById('sidebar-resizer');
+  const currentWidth = sidebar.offsetWidth;
+  resizer.style.left = `${currentWidth}px`;
 }
 
 // Filter by date
-const filters = { today: false, yesterday: false, week: false, month: false, all: true };
-const filtersDiv = document.getElementById("filters");
-
 filtersDiv.addEventListener("change", (e) => {
   if (e.target.type === "checkbox") {
     const filter = e.target.value;
@@ -373,7 +403,6 @@ filtersDiv.addEventListener("change", (e) => {
   }
 });
 
-
 document.querySelectorAll('.date-filter-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     const filter = btn.dataset.filter;
@@ -389,9 +418,14 @@ document.querySelectorAll('.date-filter-btn').forEach(btn => {
       btn.classList.add('active');
     }
 
-    const filtered = getFilteredArticles();
-    showArticles(filtered);
-    updateSidebarWithArticles(filtered);
+    const filteredForSidebar = getFilteredArticles();
+    updateSidebarWithArticles(filteredForSidebar);
+
+    const mapArticles = allArticles.filter(article =>
+      activeCategories.has(article.category)
+    );
+    showArticles(mapArticles);
+
   });
 });
 
@@ -399,20 +433,43 @@ document.querySelectorAll('.date-filter-btn').forEach(btn => {
 function getFilteredArticles() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-const anyDateFilterActive = Object.entries(filters).some(([k, v]) => k !== "all" && v);
+  const anyDateFilterActive = Object.entries(filters).some(([k, v]) => k !== "all" && v);
 
   return allArticles.filter(article => {
     if (!activeCategories.has(article.category)) return false;
+
+    // Filtrowanie po lokalizacji mapy
+    if (mapLocationFilter && mapZoomLevel !== null) {
+      const address = article.geocode_result?.address || {};
+
+      if (mapZoomLevel <= 8) {
+        // Kraj, brak dokładniejszych danych
+        const isCountryOnly =
+          address.country === mapLocationFilter.country &&
+          !address.state && !address.city && !address.town && !address.village && !address.municipality;
+        if (!isCountryOnly) return false;
+      }
+
+      if (mapZoomLevel > 8 && mapZoomLevel <= 12) {
+        const isStateOnly =
+          address.state === mapLocationFilter.state &&
+          !address.city && !address.town && !address.village && !address.municipality && !address.administrative;
+        if (!isStateOnly) return false;
+      }
+
+      if (mapZoomLevel > 11) {
+        const articleCity =
+          address.administrative || address.city || address.town || address.village || address.municipality;
+        if (articleCity !== mapLocationFilter.city) return false;
+      }
+    }
+
     if (!anyDateFilterActive) return true;
     if (!article.date) return false;
 
     const articleDate = new Date(article.date);
     articleDate.setHours(0, 0, 0, 0);
     let match = false;
-
-    if (filters.all) return allArticles.filter(article =>
-      activeCategories.has(article.category)
-    );
 
     if (filters.today && articleDate.getTime() === today.getTime()) match = true;
 
@@ -456,7 +513,7 @@ function updateInfoBox(articles) {
 
 function updateLocationLabelFromMapCenter(map) {
   const center = map.getCenter();
-  const zoom = map.getZoom();
+  mapZoomLevel = map.getZoom();
   const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${center.lat}&lon=${center.lng}&accept-language=pl`;
 
   fetch(url, {
@@ -467,22 +524,39 @@ function updateLocationLabelFromMapCenter(map) {
     .then(response => response.json())
     .then(data => {
       const address = data.address || {};
-      let label = "Nieznana lokalizacja";
+      let label = "Nieznane";
 
-      if (zoom > 12) {
-        label = address.city || address.town || address.village || address.municipality || address.suburb || address.county || "Nieznana lokalizacja";
-      } else if (zoom > 8) {
-        label = address.state || "";
+      if (mapZoomLevel > 12) {
+        label = address.administrative || address.city || address.town || address.village || address.municipality || address.suburb || address.county  || "Nieznana lokalizacja";
+      } else if (mapZoomLevel > 8) {
+        label = address.state || "Nieznane";
       } else {
-        label = address.country || "";
+        label = address.country || "Nieznane";
       }
 
       const locationBtn = document.getElementById("current-location-button");
       if (locationBtn) locationBtn.textContent = label;
+
+      mapLocationFilter = {
+        city: address.city || address.town || address.village || address.municipality || "",
+        state: address.state || "",
+        country: address.country || ""
+      };
+
+      const filteredForSidebar = getFilteredArticles();
+      updateSidebarWithArticles(filteredForSidebar);
+
+      const mapArticles = allArticles.filter(article =>
+        activeCategories.has(article.category)
+      );
+      showArticles(mapArticles);
+
+
     })
     .catch(() => {
       const locationBtn = document.getElementById("current-location-button");
-      if (locationBtn) locationBtn.textContent = "";
+      if (locationBtn) locationBtn.textContent = "Nieznane";
     });
+
 }
 
