@@ -11,13 +11,18 @@ body {
 }
 
 .sidebar {
-    flex: 0 0 22%;
+    flex: 0 0 auto;
+    width: 300px;
     background-color: #E2E2E2;
     box-shadow: 4px 0px 4px 0px rgba(0, 0, 0, 0.25);
     z-index: 900;
     height: 100vh;
     display: flex;
     flex-direction: column; 
+    resize: horizontal;
+    overflow: auto;
+    min-width: 250px;
+    max-width: 800px;
 }
 
 .logo{
@@ -39,8 +44,7 @@ p {
 }
 
 .popup-article {
-    max-width: 550px;
-    /* width: 100%; */
+    max-width: 800px;
     width: fit-content;
     box-sizing: border-box; 
     line-height: 1.1;
@@ -284,7 +288,6 @@ p.popup-article-summary {
     padding: 8px;
 }
 
-
 .leaflet-control-layers-expanded label {
     color: #00314C;
     font-size: 14px;
@@ -347,6 +350,7 @@ p.popup-article-summary {
     font-size: 13px;
     gap: 8px;
     user-select: none;
+    white-space: normal;
 }
 
 .date-filters input[type="checkbox"] {
@@ -378,12 +382,12 @@ p.popup-article-summary {
     top: 0;
     right: 0;
     z-index: 9999;
+    min-width: 120px;
     background-color: #E2E2E2;
     color: #00314C;
     padding: 10px 15px;
     border-radius: 10px;
     box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.2);
-    
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
@@ -512,3 +516,35 @@ p.popup-article-summary {
     margin-left: -5px;
     margin-bottom: -6px;;
 }
+
+.map-location-indicator {
+  display: flex;
+  justify-content: center;
+  padding: 5px 0;
+}
+
+#current-location-button {
+  font-family: 'Alegreya', serif;
+  font-size: 16px;
+  text-transform: uppercase;
+  background: white;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 999px;
+  margin: 10px;
+  box-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+  cursor: default;
+  font-weight: 600;
+}
+
+#sidebar-resizer {
+  width: 5px;
+  cursor: ew-resize;
+  background-color: #ccc;
+  height: 100vh;
+  position: absolute;
+  left: 250px; 
+  top: 0;
+  z-index: 10000;
+}
+

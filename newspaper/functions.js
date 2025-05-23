@@ -10,7 +10,7 @@ export function handleSearch(searchInput, map) {
         if (data && data[0]) {
           const lat = parseFloat(data[0].lat);
           const lon = parseFloat(data[0].lon);
-          map.setView([lat, lon], 12);
+          map.setView([lat, lon], 13);
         } else {
           alert("Nie znaleziono lokalizacji");
         }
@@ -39,7 +39,7 @@ export function locateUser(map) {
   map.locate({ setView: false, watch: false });
 
     map.once('locationfound', function (e) {
-      map.setView(e.latlng, 12);
+      map.setView(e.latlng, 13);
   });
   
     map.once('locationerror', (e) => {

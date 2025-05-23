@@ -16,6 +16,7 @@ const markerLayer = L.layerGroup().addTo(map);
 const polygonLayer = L.layerGroup().addTo(map);
 const centroidLayer = L.layerGroup();
 
+
 let activeCategories = new Set(Object.keys(categoryLayers));
 let allArticles = [];
 
@@ -234,14 +235,51 @@ var overlays = {
 
 baseLayers["CartoDB"].addTo(map);
 
+updateLocationLabelFromMapCenter(map);
+
+map.on('moveend', () => {
+  updateLocationLabelFromMapCenter(map);
+});
+
+
 const layersControl = L.control.layers(baseLayers, overlays, { position: 'topright' });
 layersControl.addTo(map);
 
 const leafletLayersControl = document.querySelector(".leaflet-control-layers");
 const customContainer = document.getElementById("map-buttons");
+
 if (leafletLayersControl && customContainer) {
   customContainer.appendChild(leafletLayersControl);
 }
+
+window.addEventListener('DOMContentLoaded', () => {
+  const sidebar = document.querySelector('.sidebar');
+  const resizer = document.getElementById('sidebar-resizer');
+
+  // ustaw poprawnie pozycję resizera
+  const initialWidth = sidebar.offsetWidth;
+  resizer.style.left = `${initialWidth}px`;
+
+  let isResizing = false;
+
+  resizer.addEventListener('mousedown', () => {
+    isResizing = true;
+    document.body.style.cursor = 'ew-resize';
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (!isResizing) return;
+    const newWidth = Math.min(Math.max(e.clientX, 250), 1000);
+    sidebar.style.flex = `0 0 ${newWidth}px`;
+    resizer.style.left = `${newWidth}px`;
+  });
+
+  document.addEventListener('mouseup', () => {
+    isResizing = false;
+    document.body.style.cursor = 'default';
+  });
+});
+
 
 // Sidebar
 function addArticleToSidebar(article) {
@@ -286,18 +324,55 @@ function updateSidebarWithArticles(articles) {
 }
 
 // Filter by date
-const filters = { today: false, yesterday: false, week: false, month: false };
+const filters = { today: false, yesterday: false, week: false, month: false, all: true };
 const filtersDiv = document.getElementById("filters");
 
 filtersDiv.addEventListener("change", (e) => {
   if (e.target.type === "checkbox") {
     const filter = e.target.value;
-    filters[filter] = e.target.checked;
+    const isChecked = e.target.checked;
+
+    // Resetuj wykluczające się filtry
+    if (filter === "all" && isChecked) {
+      Object.keys(filters).forEach(f => filters[f] = false);
+      filters.all = true;
+
+      document.querySelectorAll('#filters input[type="checkbox"]').forEach(input => {
+        input.checked = input.value === "all";
+      });
+    } else {
+      filters[filter] = isChecked;
+      filters.all = false;
+      document.querySelector('input[value="all"]').checked = false;
+
+      if (filter === "month" && isChecked) {
+        ["today", "yesterday", "week"].forEach(f => {
+          filters[f] = false;
+          document.querySelector(`input[value="${f}"]`).checked = false;
+        });
+      }
+
+      if (filter === "week" && isChecked) {
+        ["today", "yesterday", "month"].forEach(f => {
+          filters[f] = false;
+          document.querySelector(`input[value="${f}"]`).checked = false;
+        });
+      }
+
+      if ((filter === "today" || filter === "yesterday") && isChecked) {
+        ["week", "month"].forEach(f => {
+          filters[f] = false;
+          document.querySelector(`input[value="${f}"]`).checked = false;
+        });
+      }
+    }
+
     const filtered = getFilteredArticles();
     showArticles(filtered);
     updateSidebarWithArticles(filtered);
   }
 });
+
 
 document.querySelectorAll('.date-filter-btn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -324,7 +399,7 @@ document.querySelectorAll('.date-filter-btn').forEach(btn => {
 function getFilteredArticles() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const anyDateFilterActive = Object.values(filters).some(v => v);
+const anyDateFilterActive = Object.entries(filters).some(([k, v]) => k !== "all" && v);
 
   return allArticles.filter(article => {
     if (!activeCategories.has(article.category)) return false;
@@ -334,6 +409,10 @@ function getFilteredArticles() {
     const articleDate = new Date(article.date);
     articleDate.setHours(0, 0, 0, 0);
     let match = false;
+
+    if (filters.all) return allArticles.filter(article =>
+      activeCategories.has(article.category)
+    );
 
     if (filters.today && articleDate.getTime() === today.getTime()) match = true;
 
@@ -374,3 +453,36 @@ function updateInfoBox(articles) {
   document.getElementById("today_articles").innerText = `${todayCount}`;
   document.getElementById("total_articles").innerText = `${articles.length}`;
 }
+
+function updateLocationLabelFromMapCenter(map) {
+  const center = map.getCenter();
+  const zoom = map.getZoom();
+  const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${center.lat}&lon=${center.lng}&accept-language=pl`;
+
+  fetch(url, {
+    headers: {
+      'User-Agent': 'WiadoMo-NewsRadar/1.0'
+    }
+  })
+    .then(response => response.json())
+    .then(data => {
+      const address = data.address || {};
+      let label = "Nieznana lokalizacja";
+
+      if (zoom > 12) {
+        label = address.city || address.town || address.village || address.municipality || address.suburb || address.county || "Nieznana lokalizacja";
+      } else if (zoom > 8) {
+        label = address.state || "";
+      } else {
+        label = address.country || "";
+      }
+
+      const locationBtn = document.getElementById("current-location-button");
+      if (locationBtn) locationBtn.textContent = label;
+    })
+    .catch(() => {
+      const locationBtn = document.getElementById("current-location-button");
+      if (locationBtn) locationBtn.textContent = "";
+    });
+}
+
