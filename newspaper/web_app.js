@@ -16,6 +16,7 @@ const markerLayer = L.layerGroup().addTo(map);
 const polygonLayer = L.layerGroup();
 const centroidLayer = L.layerGroup();
 
+
 let activeCategories = new Set(Object.keys(categoryLayers));
 let allArticles = [];
 
@@ -226,6 +227,7 @@ searchInput.addEventListener("keydown", (event) => {
   }
 });
 
+
 // Layer control
 map.on('overlayadd', function(e) {
   if (e.layer === polygonLayer || e.layer === markerLayer || e.layer === centroidLayer) {
@@ -254,7 +256,7 @@ map.on('overlayremove', function(e) {
 var overlays = {
   "Punkty": markerLayer,
   "Poligony": polygonLayer,
-  "Centroidy": centroidLayer,
+  "Centroidy": centroidLayer
 };
 
 baseLayers["CartoDB"].addTo(map);
@@ -264,7 +266,6 @@ updateLocationLabelFromMapCenter(map);
 map.on('moveend', () => {
   updateLocationLabelFromMapCenter(map);
 });
-
 
 const layersControl = L.control.layers(baseLayers, overlays, { position: 'topright' });
 layersControl.addTo(map);
@@ -453,14 +454,14 @@ function getFilteredArticles() {
       if (mapZoomLevel > 8 && mapZoomLevel <= 12) {
         const isStateOnly =
           address.state === mapLocationFilter.state &&
-          !address.city && !address.town && !address.village && !address.municipality && !address.administrative;
+          !address.city && !address.town && !address.village && !address.municipality && !address.administrative && !address.county;
         if (!isStateOnly) return false;
       }
 
       if (mapZoomLevel > 11) {
         const articleCity =
-          address.administrative || address.city || address.town || address.village || address.municipality;
-        if (articleCity !== mapLocationFilter.city) return false;
+          address.administrative || address.county || address.city || address.town || address.municipality || address.suburb;
+        if (articleCity !== mapLocationFilter.county) return false;
       }
     }
 
@@ -526,8 +527,9 @@ function updateLocationLabelFromMapCenter(map) {
       const address = data.address || {};
       let label = "Nieznane";
 
-      if (mapZoomLevel > 12) {
-        label = address.administrative || address.city || address.town || address.village || address.municipality || address.suburb || address.county  || "Nieznana lokalizacja";
+      if (mapZoomLevel > 11
+      ) {
+        label = address.administrative || address.county || address.city || address.town || address.municipality || address.suburb  || "Nieznana lokalizacja";
       } else if (mapZoomLevel > 8) {
         label = address.state || "Nieznane";
       } else {
@@ -538,7 +540,7 @@ function updateLocationLabelFromMapCenter(map) {
       if (locationBtn) locationBtn.textContent = label;
 
       mapLocationFilter = {
-        city: address.city || address.town || address.village || address.municipality || "",
+        county: address.administrative || address.county || address.city || address.town || address.municipality || address.suburb || "",
         state: address.state || "",
         country: address.country || ""
       };
