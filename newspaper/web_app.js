@@ -158,7 +158,7 @@ const CategoryToggleControl = L.Control.extend({
     Object.keys(categoryIcons).forEach(category => {
       const btn = L.DomUtil.create('div', 'category-toggle-btn', div);
       const color = categoryColors[category] || "#000";
-      btn.innerHTML = `<span>${category}</span><img src="${categoryIcons[category].options.iconUrl}" title="${category}" alt="${category}">`;
+      btn.innerHTML = `<span class="category-toggle-text">${category}</span><img src="${categoryIcons[category].options.iconUrl}" title="${category}" alt="${category}">`;
       btn.style.backgroundColor = color;
       btn.dataset.category = category;
       btn.classList.add('active');

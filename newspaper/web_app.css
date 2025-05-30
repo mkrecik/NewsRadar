@@ -10,6 +10,10 @@ body {
     flex-direction: row;
 }
 
+.leaflet-control-layers-toggle {
+    background-image: url("icons/layers.svg") !important;
+    background-size: 28px !important;
+}
 .sidebar {
     flex: 0 0 auto;
     width: unset;
@@ -24,6 +28,8 @@ body {
     min-width: 250px;
     max-width: 1000px;
 }
+
+
 
 .logo{
     display: flex;
@@ -51,6 +57,7 @@ p {
     padding: 0px;
     border-radius: 10px;
     fill: #F5F5F5;
+    z-index: 9999;
 }
 
 a {
@@ -152,15 +159,15 @@ p.popup-article-summary {
     justify-content: flex-end; 
     align-items: center; 
     text-align: right;
-    font-size: 13px;
+    font-size: 14px;
     font-style: normal;
     font-weight: 500;
     width: auto;
     min-width: 0; 
     max-width: none;
-    gap: 10px;
+    /* gap: 10px; */
     cursor: pointer;
-    padding: 5px 10px;
+    padding: 10px;
     border-radius: 999px;
     color: #f5f5f5;
     box-shadow: 4px 4px 4px 0px rgba(0, 0, 0, 0.25);
@@ -174,11 +181,18 @@ p.popup-article-summary {
 
 .category-toggle-btn span {
     white-space: nowrap;
+    display: none;
+}
+
+.category-toggle-btn:hover span {
+    display: inline-block;
+    padding-left: 15px;
+    padding-right: 10px;
 }
 
 .category-toggle-btn img {
-    width: 30px;
-    height: 30px;
+    width: 34px;
+    height: 34px;
     flex-shrink: 0;
 }
 
@@ -220,6 +234,8 @@ p.popup-article-summary {
     cursor: pointer;
     padding: 5px;
     height: 40px;
+    display: flex;
+    align-items: center;
 }
 
 #search-button img {
@@ -235,13 +251,6 @@ p.popup-article-summary {
     display: flex;
     gap: 10px;
     align-items: flex-start;
-}
-
-#map-buttons {
-    display: flex;
-    flex-direction: column-reverse;
-    gap: 10px;
-    align-items: flex-end;
 }
 
 #map-buttons {
@@ -315,7 +324,8 @@ p.popup-article-summary {
     left: 20px;
     z-index: 9999;
     display: flex;
-
+    flex-direction: column;
+    gap: 10px;
   }
 
 .zoom-out img, .zoom-in img{
@@ -327,16 +337,13 @@ p.popup-article-summary {
     width: 54px;
     height: 54px;
     border-radius: 50%;
+    padding: 10px;
     border: none;
     background-color: #E2E2E2;
     box-shadow: 4px 4px 8px rgba(0,0,0,0.2);
     cursor: pointer;
     transition: transform 0.2s ease;
     z-index: 9999;
-    padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
 }
 
 .zoom-btn:hover {
@@ -379,7 +386,7 @@ p.popup-article-summary {
 
 .date-filters {
     position: absolute;
-    top: 0;
+    top: 0px;
     right: 0;
     z-index: 9999;
     min-width: 120px;
@@ -400,7 +407,7 @@ p.popup-article-summary {
     pointer-events: auto;
 }
 
-.reset-view-button, .info-button {
+.reset-view-button, .info-button, .zoom-btn {
     padding: 0;
     width: 54px;
     height: 54px;
@@ -430,7 +437,6 @@ p.popup-article-summary {
     padding: 15px;
 }
 
-/* Styl pojedynczego artykułu w sidebarze */
 .sidebar-article {
     /* background: #f5f5f5; */
     background: white;
@@ -440,7 +446,6 @@ p.popup-article-summary {
     padding-top: 10px;
     padding-bottom: 15px;
     box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.2);
-    /* cursor: pointer; */
 }
 
 .sidebar-article-title {
@@ -457,14 +462,17 @@ p.popup-article-summary {
 
 .info-container {
     display: none;
-    margin-left: 30px;
+    position: absolute;
+    bottom: 20px;
+    left: 90px;
     background-color: white;
     padding: 20px;
     border-radius: 10px;
     box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.2); 
-    max-width: 65%;
+    max-width: 50%;
     flex: 1;
     align-self: stretch;
+    z-index: 1000;
 }
 
 .info-content {
@@ -510,6 +518,10 @@ p.popup-article-summary {
     margin-top: auto;
 }
 
+.info-footer-right {
+    text-align: right;
+}
+
 .info-logo {
     width: 70px;
     padding: 0;
@@ -520,6 +532,7 @@ p.popup-article-summary {
 .map-location-indicator {
   display: flex;
   justify-content: center;
+  align-items: center;
   padding: 5px 0;
 }
 
@@ -546,5 +559,134 @@ p.popup-article-summary {
   left: 250px; 
   top: 0;
   z-index: 10000;
+}
+
+
+@media (max-width: 668px) {
+    body {
+        flex-direction: column-reverse;
+        position: relative;
+    }
+
+    .leaflet-control-attribution {
+        border-radius: 5px;
+        margin-bottom: 3px !important;
+      }
+      
+    .sidebar {
+        flex-direction: column;
+        box-shadow: 0px -4px 4px rgba(0, 0, 0, 0.25);
+        flex: 0 0 80px !important;
+        border-top-left-radius: 30px;
+        border-top-right-radius: 30px;
+    }
+
+    .sidebar-content {
+        flex: 1;
+        overflow-x: auto;
+    }
+
+    #sidebar-resizer {
+        display: none;
+    }
+
+    .logo {
+        position: fixed;
+        justify-content: start;
+        top: 0;
+        left: 10px;
+        width: 100%;
+        z-index: 1000;
+    }
+
+    #search-input {
+        opacity: 0;
+        visibility: hidden;
+    }
+
+    #search-button {
+        width:28px;
+        height: 28px;
+        transition: 0.2s;
+    }
+
+    #search-button img {
+        width: 28px;
+        height: 28px;
+        position: absolute;
+        right: 10px;
+    }
+
+    #search-container {
+        padding: 8px;
+        position: relative;
+        background-color: #E2E2E2;
+    }
+
+    #search-button:hover #search-input {
+        opacity: 1;
+        visibility: visible;
+        transition: 0.2s;
+
+    }
+
+    #search-button:hover {
+        width: 200px;
+        padding: 5px;
+        transition: 0.2s;
+    }
+
+    
+    .leaflet-control-layers {
+        padding: 8px;
+    }
+    .leaflet-control-layers-toggle{
+        width: 28px !important;           
+        height: 28px !important;  
+        background-size: 26px 26px !important; 
+
+    }
+    
+    .category-toggle-control  {
+        gap: 7px;
+    }
+
+    .category-toggle-btn img {
+        width: 28px;
+        height: 28px;
+    }
+
+    .category-toggle-btn {
+        padding: 8px;;
+    }
+
+    .filter-button, .locate-user-button {
+        padding: 8px;
+        width: 28px;
+        height: 28px;
+    }
+
+    .locate-user-button img, .filter-button img{
+        width: 28px;
+        height: 28px;
+    }
+
+
+    .reset-view-button img, .info-button img {
+        width: 28px;
+        height: 28px;
+    }
+
+    .reset-view-button, .info-button {
+        width: 28px;
+        height: 28px;
+        padding: 8px ;
+    }
+
+    .zoom-btn {
+        width: 44px;
+        height: 44px;
+    }
+
 }
 

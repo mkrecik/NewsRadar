@@ -21,15 +21,16 @@
             <button id="current-location-button">Nieznane</button>
         </div>   
         <div class="sidebar-content"></div>
-    </div>
+        <div id="sidebar-resizer"></div>
     </div> 
-    <div id="sidebar-resizer"></div>
+
     <div id="map">
         <div id="map-controls">
             <div id="search-container">
-                <input type="text" id="search-input" placeholder="Szukaj...">
+
                 <button id="search-button">
                     <img src="icons/search.svg" alt="szukaj" />
+                    <input type="text" id="search-input" placeholder="Szukaj...">
                 </button>
             </div>
             <div id="map-buttons">
@@ -57,6 +58,7 @@
                     <button class="zoom-btn zoom-out">
                         <img src="icons/minus.svg" alt="przybliż" />
                     </button>
+                </div>
                 <div class="reset-view-button">
                     <img src="lucide/house.svg" alt="resetuj widok" />
                 </div>
@@ -90,5 +92,8 @@
         </div>
     </div>
     <script type="module" src = "web_app.js"></script>
+    <script type="module" src="mobile_web_app.js"></script>
+
+      
 </body>
 </html>
