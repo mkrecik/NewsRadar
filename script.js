@@ -110,7 +110,7 @@ function process_geometry(geometry, category, source, location, article, date, s
 }
 
 // Get data 
-fetch('http://127.0.0.1:8000/articles')
+fetch('https://wiadomo.onrender.com/articles')
   .then(response => response.json())
   .then(data => {
     allArticles = data;
@@ -126,7 +126,7 @@ fetch('http://127.0.0.1:8000/articles')
     updateInfoBox(allArticles);
   });
 
-fetch('http://127.0.0.1:8000/polygons')
+fetch('https://wiadomo.onrender.com/polygons')
   .then(response => response.json())
   .then(polygons => {
     polygonLayer.clearLayers();
