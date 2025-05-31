@@ -11,7 +11,7 @@ body {
 }
 
 .leaflet-control-layers-toggle {
-    background-image: url("icons/layers.svg") !important;
+    background-image: url("newspaper/icons/layers.svg") !important;
     background-size: 28px !important;
 }
 .sidebar {

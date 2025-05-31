@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WiadoMo</title>
-    <link rel="icon" type="image/x-icon" href="icons/favicon.ico">
+    <link rel="icon" type="image/x-icon" href="/newspaper/icons/favicon.ico">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-    <link rel="stylesheet" href="web_app.css">
+    <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Alegreya:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet">
@@ -15,7 +15,7 @@
 <body>
     <div class="sidebar">
         <div class="logo">
-            <img src="images/logo.svg" alt="logo WiadoMo.">
+            <img src="newspaper/images/logo.svg" alt="logo WiadoMo.">
         </div>  
         <div class="map-location-indicator">
             <button id="current-location-button">Nieznane</button>
@@ -29,13 +29,13 @@
             <div id="search-container">
 
                 <button id="search-button">
-                    <img src="icons/search.svg" alt="szukaj" />
+                    <img src="newspaper/icons/search.svg" alt="szukaj" />
                     <input type="text" id="search-input" placeholder="Szukaj...">
                 </button>
             </div>
             <div id="map-buttons">
                 <div class="filter-button">
-                    <img src="lucide/calendar.svg" alt="filtruj" />
+                    <img src="newspaper/lucide/calendar.svg" alt="filtruj" />
                     <div id="filters" class="date-filters">
                         <label><input type="checkbox" value="today"> Dzisiaj</label>
                         <label><input type="checkbox" value="yesterday"> Wczoraj</label>
@@ -45,7 +45,7 @@
                     </div>
                 </div>
                 <div class="locate-user-button">
-                    <img src="lucide/localize.svg" alt="lokalizuj" />
+                    <img src="newspaper/lucide/localize.svg" alt="lokalizuj" />
                 </div>
             </div>  
         </div>
@@ -53,17 +53,17 @@
             <div class="left-map-controls-container">
                 <div class="custom-zoom-container">
                     <button class="zoom-btn zoom-in">
-                        <img src="icons/plus.svg" alt="przybliż" />
+                        <img src="newspaper/lucide/plus.svg" alt="przybliż" />
                     </button>
                     <button class="zoom-btn zoom-out">
-                        <img src="icons/minus.svg" alt="przybliż" />
+                        <img src="newspaper/lucide/minus.svg" alt="przybliż" />
                     </button>
                 </div>
                 <div class="reset-view-button">
-                    <img src="lucide/house.svg" alt="resetuj widok" />
+                    <img src="newspaper/lucide/house.svg" alt="resetuj widok" />
                 </div>
                 <div class="info-button">
-                    <img src="lucide/info.svg" alt="resetuj widok" />
+                    <img src="newspaper/lucide/info.svg" alt="resetuj widok" />
                 </div>
             </div>
             <div class="info-container">
@@ -80,7 +80,7 @@
                     </div>          
                     <div class="info-footer">
                         <div class="info-footer-left">
-                            <img class="info-logo" src="images/logo.svg" alt="telefon" />
+                            <img class="info-logo" src="newspaper/images/logo.svg" alt="telefon" />
                             <p>2025</p>
                         </div>
                         <div class="info-footer-right">
@@ -91,9 +91,8 @@
             </div>
         </div>
     </div>
-    <script type="module" src = "web_app.js"></script>
-    <script type="module" src="mobile_web_app.js"></script>
-
-      
+    <script type="module" src = "script.js"></script>
+    <script type="module" src="newspaper/mobile_web_app.js"></script>
+ 
 </body>
 </html>

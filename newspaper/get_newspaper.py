@@ -5,16 +5,11 @@ import requests
 from bs4 import BeautifulSoup
 from dateutil.parser import parse as date_parse 
 from pymongo import MongoClient
-from transformers import AutoTokenizer, AutoModelForTokenClassification, pipeline
-import torch
 import numpy as np
 from openai import OpenAI
 from datetime import datetime, timezone
 
 from api import MONGO_URI, OPENROUTER_API_KEY
-
-# pip install transformers torch json time requests beautifulsoup4 pymongo python-dateutil spacy newspaper3k lxml[html_clean] protobuf tiktoken
-# python -m spacy download pl_core_news_lg
 
 ### baza danych
 db_client = MongoClient(MONGO_URI)
@@ -244,21 +239,25 @@ def geocode(query):
     lat = float(result['lat'])
     lon = float(result['lon'])
     geojson = result.get('geojson')
-    object_class = result.get('class')
-    object_type = result.get('type')
+    geometry_type = None
     address = result.get('address', {})
 
-    # Zwróć poligon tylko dla jednostek administracyjnych
-    if object_class == 'boundary' and object_type == 'administrative' and geojson:
+    # USTALAMY type:
+    if geojson and geojson.get('type') in ["Polygon", "MultiPolygon"]:
         geometry_type = geojson['type']
-        result =  {
-            'geometry': geojson,
+        result = {
+            'geometry': {
+                'type': geometry_type
+            },
             'center': {'lat': lat, 'lon': lon},
             'address': address
         }
     else:
+        # fallback → Point
         result = {
-            'geometry': {'type': 'Point', 'coordinates': [lon, lat]},
+            'geometry': {
+                'type': 'Point'
+            },
             'center': {'lat': lat, 'lon': lon},
             'address': address
         }
@@ -266,14 +265,12 @@ def geocode(query):
     return result
 
 def remove_polygon_geometries(collection):
-    for article in collection.find({
-        "geocode_result.geometry.type": {"$in": ["Polygon", "MultiPolygon"]}
-    }):
-        collection.update_one(
-            {"_id": article["_id"]},
-            {"$unset": {"geocode_result.geometry.coordinates": ""}}
-        )
-        print(f"Removed poligon: {article['title']}")
+    result = collection.update_many(
+        { "geocode_result.geometry.type": { "$in": ["Polygon", "MultiPolygon"] } },
+        { "$unset": { "geocode_result.geometry.coordinates": "" } }
+    )
+    print(f"Removed coordinates from {result.modified_count} articles.")
+
 
 def remove_polska(collection):
     for article in collection.find({
@@ -403,11 +400,14 @@ def process_articles(site, whitelist, collection):
 
             # zapisz poligony do osobnej kolekcji
             if (
-                geocode_result.get("geometry_type") in ["Polygon", "MultiPolygon"]
+                geocode_result.get("geometry", {}).get("type") in ["Polygon", "MultiPolygon"]
                 and "geometry" in geocode_result
             ):
-                save_poligons(geocode_result, polygon_collection, location)
-                geocode_result.pop("geometry", None)
+                save_poligons(geocode_result, polygon_collection, location, article_url)
+                geocode_result["geometry"] = {
+                    "type": geocode_result["geometry"]["type"]
+                }
+
 
             article_data = {
                 "title": a.title,
@@ -436,17 +436,30 @@ def update_date(collection):
             )
             print(f"Zaktualizowano datę dla: {article['title']}")
 
-def update_geocode(collection):
+def update_geocode(collection, polygon_collection):
     for article in collection.find():
-        if "geocode_result" not in article or article["geocode_result"] is None:
+        if "geocode_result" not in article or article["geocode_result"] is None or article["geocode_result"].get("geometry") is None:
             location = article.get("location")
             if location:
                 geocode_result = geocode(location)
+                if geocode_result is None:
+                    print(f"Brak geocode dla: {article['title']}")
+                    continue
+
+                geometry_type = geocode_result.get("geometry", {}).get("type")
+
+                if geometry_type in ["Polygon", "MultiPolygon"]:
+                    save_poligons(geocode_result, polygon_collection, location, article["url"])
+
+                    geocode_result["geometry"] = {
+                        "type": geometry_type
+                    }
+
                 collection.update_one(
                     {"_id": article["_id"]},
                     {"$set": {"geocode_result": geocode_result}}
                 )
-                print(f"Zaktualizowano geokodowanie dla: {article['title']}")
+                print(f"Zaktualizowano geokodowanie dla: {article['title']} ({geometry_type})")
 
 def update_summary(collection):
     for article in collection.find():
@@ -584,7 +597,7 @@ def delete_articles_without_geocode(collection):
     result = collection.delete_many({"geocode_result": None})
     print(f"Deleted {result.deleted_count} with no geocode result.")
 
-def fix_geometry_type(collection):
+def fix_geometry(collection):
     for article in collection.find():
         geocode = article.get("geocode_result", {})
         if not geocode:
@@ -613,21 +626,85 @@ def fix_geometry_type(collection):
         )
         print(f"Zaktualizowano geometry.type dla: {article['title']}")
 
+def restore_geometry_type_from_polygons(article_collection, polygon_collection):
+    polygons = polygon_collection.find()
+
+    count = 0
+    for poly in polygons:
+        geometry_type = poly.get("geometry", {}).get("type")
+        article_urls = poly.get("articles", [])
+
+        for url in article_urls:
+            article = article_collection.find_one({ "url": url })
+            if not article:
+                continue
+
+            geocode_result = article.get("geocode_result", {})
+            geometry = geocode_result.get("geometry")
+
+            # Jeśli NIE MA geometry — dodajemy cały
+            if geometry is None:
+                geocode_result["geometry"] = { "type": geometry_type }
+                article_collection.update_one(
+                    { "_id": article["_id"] },
+                    { "$set": { "geocode_result": geocode_result } }
+                )
+                count += 1
+                continue
+
+            # Jeśli jest geometry, ale brak type — uzupełniamy
+            if "type" not in geometry:
+                geometry["type"] = geometry_type
+                article_collection.update_one(
+                    { "_id": article["_id"] },
+                    { "$set": { "geocode_result.geometry": geometry } }
+                )
+                count += 1
+
+    print(f"Restored geometry.type for {count} articles.")
+
+def remove_duplicate_title_date(collection):
+    pipeline = [
+        {"$group": {
+            "_id": {"title": "$title", "date": "$date"},
+            "ids": {"$addToSet": "$_id"},
+            "count": {"$sum": 1}
+        }},
+        {"$match": {"count": {"$gt": 1}}}
+    ]
+    
+    duplicates = list(collection.aggregate(pipeline))
+    removed_count = 0
+    
+    for dup in duplicates:
+        ids = dup["ids"]
+        ids_to_remove = ids[1:]
+        
+        result = collection.delete_many({"_id": {"$in": ids_to_remove}})
+        removed_count += result.deleted_count
+        
+        print(f"[DUPLICATE TITLE+DATE] title='{dup['_id']['title']}' date='{dup['_id']['date']}' → removed {result.deleted_count} duplicates")
+    
+    print(f"\n=== DUPLICATE TITLE+DATE CLEANUP COMPLETE ===")
+    print(f"Total duplicates removed: {removed_count}")
+    print("============================================\n")
+
 if __name__ == "__main__":
     articles_data = process_articles(site, whitelist, collection)
     # print_articles(site, whitelist)
-
-    # # Save articles to json
-    # with open(r"article_json/interia_gemini2404.json", "w", encoding="utf-8") as f:
-    #     json.dump(articles_data, f, ensure_ascii=False, indent=4)
-    # print(f"Saved to json.")
 
     # Save to MongoDB
     if articles_data:
         collection.insert_many(articles_data)
         print(f"Saved {len(articles_data)} articles to MongoDB.")
 
+    # remove_duplicate_title_date(collection)
+    # update_geocode(collection, polygon_collection)
+    # fix_all(collection)
+
     # remove_polygon_geometries(collection)
+    # restore_geometry_type_from_polygons(collection, polygon_collection)
+
     # remove_polska(collection)
     # update_geocode_json(r"article_json/interia_gemini2304.json")
     # update_geocode(collection)

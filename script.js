@@ -1,5 +1,5 @@
-import { handleSearch, style_popup, locateUser } from './functions.js';
-import { baseLayers, categoryIcons, categoryColors, categoryLayers } from './constants.js';
+import { handleSearch, style_popup, locateUser } from './newspaper/functions.js';
+import { baseLayers, categoryIcons, categoryColors, categoryLayers, polygonLevelStyles } from './newspaper/constants.js';
 
 var map = L.map('map').setView([52.03993467110199, 19.286734471610345], 7);
 
@@ -9,12 +9,8 @@ map.getPane('polygons').style.zIndex = 400;
 map.createPane('points');
 map.getPane('points').style.zIndex = 600;
 
-map.createPane('centroids');
-map.getPane('centroids').style.zIndex = 500;
-
 const markerLayer = L.layerGroup().addTo(map);
-const polygonLayer = L.layerGroup();
-const centroidLayer = L.layerGroup();
+const polygonLayer = L.layerGroup().addTo(map);
 
 
 let activeCategories = new Set(Object.keys(categoryLayers));
@@ -22,8 +18,6 @@ let allArticles = [];
 
 function showArticles(articles) {
   markerLayer.clearLayers();
-  polygonLayer.clearLayers();
-  centroidLayer.clearLayers();
 
   Object.keys(categoryLayers).forEach(cat => {
     categoryLayers[cat].clearLayers();
@@ -31,10 +25,9 @@ function showArticles(articles) {
 
   const showPoints = map.hasLayer(markerLayer);
   const showPolygons = map.hasLayer(polygonLayer);
-  const showCentroids = map.hasLayer(centroidLayer);
 
   let pointsCount = 0;
-  let centroidsCount = 0;
+  let polygonCount = 0;
 
   articles.forEach(article => {
     const geometry = article.geocode_result?.geometry;
@@ -56,15 +49,15 @@ function showArticles(articles) {
 
     const geometryType = geometry?.type;
     if (geometryType === "Point" && showPoints) pointsCount++;
-    if ((geometryType === "Polygon" || geometryType === "MultiPolygon") && showCentroids) centroidsCount++;
+    if ((geometryType === "Polygon" || geometryType === "MultiPolygon") && showPolygons) polygonCount++;
 
-    process_geometry(geometry, category, source, location, article, articleDate, showPoints, showPolygons, showCentroids);
+    process_geometry(geometry, category, source, location, article, articleDate, showPoints, showPolygons);
   });
 
-  console.log(`Wyświetlono: ${pointsCount} punktów, ${centroidsCount} centroidów`);
+  console.log(`Wyświetlono: ${pointsCount} punktów, ${polygonCount} poligonów`);
 }
 
-function process_geometry(geometry, category, source, location, article, date, showPoints, showPolygons, showCentroids) {
+function process_geometry(geometry, category, source, location, article, date, showPoints, showPolygons) {
   const color = categoryColors[category] || "#000";
 
   if (geometry.coordinates) {
@@ -114,22 +107,6 @@ function process_geometry(geometry, category, source, location, article, date, s
       });
     }
   }
-
-  if ((geometry.type === "Polygon" || geometry.type === "MultiPolygon") && showCentroids) {
-    const center = article.geocode_result?.center;
-    if (center) {
-      const marker = L.circleMarker([center.lat, center.lon], {
-        pane: 'centroids',
-        radius: 5,
-        color: color,
-        fillColor: color,
-        fillOpacity: 0.8,
-        weight: 1
-      }).addTo(centroidLayer);
-      categoryLayers[category]?.addLayer(marker);
-      marker.bindPopup(style_popup(category, source, location, date, article));
-    }
-  }
 }
 
 // Get data 
@@ -138,6 +115,7 @@ fetch('http://127.0.0.1:8000/articles')
   .then(data => {
     allArticles = data;
     const filteredForSidebar = getFilteredArticles();
+    updateLocationLabelFromMapCenter(map);
     updateSidebarWithArticles(filteredForSidebar);
 
     const mapArticles = allArticles.filter(article =>
@@ -147,6 +125,45 @@ fetch('http://127.0.0.1:8000/articles')
 
     updateInfoBox(allArticles);
   });
+
+fetch('http://127.0.0.1:8000/polygons')
+  .then(response => response.json())
+  .then(polygons => {
+    polygonLayer.clearLayers();
+
+    polygons.sort((a, b) => getPolygonLevel(a) - getPolygonLevel(b));
+
+    polygons.forEach(polygon => {
+        const geometry = polygon.geometry;
+        const style = getPolygonStyle(polygon);
+
+        if (geometry.type === "Polygon") {
+            const poly = L.polygon(
+                geometry.coordinates.map(coord => coord.map(c => [c[1], c[0]])),
+                style
+            ).addTo(polygonLayer);
+
+            poly.on('click', function() {
+                zoomToPolygonAndFilter(polygon, poly);
+            });
+        }
+
+        if (geometry.type === "MultiPolygon") {
+            geometry.coordinates.forEach(polygonCoords => {
+                const poly = L.polygon(
+                    polygonCoords.map(ring => ring.map(c => [c[1], c[0]])),
+                    style
+                ).addTo(polygonLayer);
+
+                poly.on('click', function() {
+                    zoomToPolygonAndFilter(polygon, poly);
+                });
+            });
+        }
+    });
+    console.log(`Załadowano ${polygons.length} poligonów`);
+  });
+
 
 // Category layers toggle
 Object.values(categoryLayers).forEach(layer => layer.addTo(map));
@@ -230,8 +247,9 @@ searchInput.addEventListener("keydown", (event) => {
 
 // Layer control
 map.on('overlayadd', function(e) {
-  if (e.layer === polygonLayer || e.layer === markerLayer || e.layer === centroidLayer) {
+  if (e.layer === polygonLayer || e.layer === markerLayer) {
     const filteredForSidebar = getFilteredArticles();
+    
     updateSidebarWithArticles(filteredForSidebar);
 
     const mapArticles = allArticles.filter(article =>
@@ -242,7 +260,7 @@ map.on('overlayadd', function(e) {
 });
 
 map.on('overlayremove', function(e) {
-  if (e.layer === polygonLayer || e.layer === markerLayer || e.layer === centroidLayer) {
+  if (e.layer === polygonLayer || e.layer === markerLayer) {
     const filteredForSidebar = getFilteredArticles();
     updateSidebarWithArticles(filteredForSidebar);
 
@@ -255,8 +273,7 @@ map.on('overlayremove', function(e) {
 
 var overlays = {
   "Punkty": markerLayer,
-  "Poligony": polygonLayer,
-  "Centroidy": centroidLayer
+  "Poligony": polygonLayer
 };
 
 baseLayers["CartoDB"].addTo(map);
@@ -363,8 +380,12 @@ filtersDiv.addEventListener("change", (e) => {
     const filter = e.target.value;
     const isChecked = e.target.checked;
 
-    // Resetuj wykluczające się filtry
-    if (filter === "all" && isChecked) {
+    if (filter === "all") {
+      if (!isChecked) {
+        e.target.checked = true;
+        return;
+      }
+
       Object.keys(filters).forEach(f => filters[f] = false);
       filters.all = true;
 
@@ -380,6 +401,7 @@ filtersDiv.addEventListener("change", (e) => {
         ["today", "yesterday", "week"].forEach(f => {
           filters[f] = false;
           document.querySelector(`input[value="${f}"]`).checked = false;
+
         });
       }
 
@@ -387,6 +409,7 @@ filtersDiv.addEventListener("change", (e) => {
         ["today", "yesterday", "month"].forEach(f => {
           filters[f] = false;
           document.querySelector(`input[value="${f}"]`).checked = false;
+
         });
       }
 
@@ -398,9 +421,21 @@ filtersDiv.addEventListener("change", (e) => {
       }
     }
 
-    const filtered = getFilteredArticles();
-    showArticles(filtered);
-    updateSidebarWithArticles(filtered);
+    const isAnyActive = Object.entries(filters).some(([key, value]) => key !== "all" && value);
+
+    if (!isAnyActive) {
+        filters.all = true;
+        document.querySelector('input[value="all"]').checked = true;
+    }
+
+    updateLocationLabelFromMapCenter(map);
+
+    const filteredForSidebar = getFilteredArticles();
+    updateSidebarWithArticles(filteredForSidebar);
+
+    const mapArticles = getFilteredArticles(true);
+    showArticles(mapArticles);
+
   }
 });
 
@@ -420,6 +455,7 @@ document.querySelectorAll('.date-filter-btn').forEach(btn => {
     }
 
     const filteredForSidebar = getFilteredArticles();
+    updateLocationLabelFromMapCenter(map);
     updateSidebarWithArticles(filteredForSidebar);
 
     const mapArticles = allArticles.filter(article =>
@@ -431,7 +467,7 @@ document.querySelectorAll('.date-filter-btn').forEach(btn => {
 });
 
 // Filter by date and category
-function getFilteredArticles() {
+function getFilteredArticles(skipLocationFilter = false) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const anyDateFilterActive = Object.entries(filters).some(([k, v]) => k !== "all" && v);
@@ -440,18 +476,17 @@ function getFilteredArticles() {
     if (!activeCategories.has(article.category)) return false;
 
     // Filtrowanie po lokalizacji mapy
-    if (mapLocationFilter && mapZoomLevel !== null) {
+    if (!skipLocationFilter && mapLocationFilter && mapZoomLevel !== null) {
       const address = article.geocode_result?.address || {};
 
       if (mapZoomLevel <= 8) {
-        // Kraj, brak dokładniejszych danych
         const isCountryOnly =
           address.country === mapLocationFilter.country &&
           !address.state && !address.city && !address.town && !address.village && !address.municipality;
         if (!isCountryOnly) return false;
       }
 
-      if (mapZoomLevel > 8 && mapZoomLevel <= 12) {
+      if (mapZoomLevel > 8 && mapZoomLevel <= 11) {
         const isStateOnly =
           address.state === mapLocationFilter.state &&
           !address.city && !address.town && !address.village && !address.municipality && !address.administrative && !address.county;
@@ -496,6 +531,7 @@ function getFilteredArticles() {
   });
 }
 
+
 // Update articles count in info
 function updateInfoBox(articles) {
   const today = new Date();
@@ -525,13 +561,13 @@ function updateLocationLabelFromMapCenter(map) {
     .then(response => response.json())
     .then(data => {
       const address = data.address || {};
-      let label = "Nieznane";
+      let label = "Przybliż na ląd";
 
       if (mapZoomLevel > 11
       ) {
         label = address.administrative || address.county || address.city || address.town || address.municipality || address.suburb  || "Nieznana lokalizacja";
       } else if (mapZoomLevel > 8) {
-        label = address.state || "Nieznane";
+        label = address.state || "Przybliż na ląd";
       } else {
         label = address.country || "Nieznane";
       }
@@ -548,10 +584,13 @@ function updateLocationLabelFromMapCenter(map) {
       const filteredForSidebar = getFilteredArticles();
       updateSidebarWithArticles(filteredForSidebar);
 
-      const mapArticles = allArticles.filter(article =>
-        activeCategories.has(article.category)
-      );
-      showArticles(mapArticles);
+      const pointsArticles = getFilteredArticles(true);
+      const polygonsArticles = getFilteredArticles();
+
+      const combinedArticles = pointsArticles.map(a => ({...a, __type: "Point"}))
+          .concat(polygonsArticles.map(a => ({...a, __type: "PolygonOrMultiPolygon"})));
+
+      showArticles(combinedArticles);
 
 
     })
@@ -562,3 +601,49 @@ function updateLocationLabelFromMapCenter(map) {
 
 }
 
+function isCountryPolygon(polygon) {
+    return polygon.address?.country && !polygon.address?.state;
+}
+
+function isRegionPolygon(polygon) {
+    return polygon.address?.state && !(polygon.address?.county || polygon.address?.administrative || polygon.address?.city || polygon.address?.town);
+}
+
+function isCountyPolygon(polygon) {
+    return polygon.address?.county || polygon.address?.administrative || polygon.address?.city || polygon.address?.town;
+}
+
+function getPolygonLevel(polygon) {
+    if (isCountryPolygon(polygon)) return 'country';
+    if (isRegionPolygon(polygon)) return 'state';
+    if (isCountyPolygon(polygon)) return 'county';
+    return 'default';
+}
+
+function getPolygonStyle(polygon) {
+    return {
+        pane: 'polygons',
+        ...polygonLevelStyles[getPolygonLevel(polygon)]
+    };
+}
+
+function zoomToPolygonAndFilter(polygon, polyLayer) {
+    map.fitBounds(polyLayer.getBounds());
+
+    // mapLocationFilter = {
+    //     county: polygon.address?.administrative || polygon.address?.county || polygon.address?.city || polygon.address?.town || polygon.address?.municipality || polygon.address?.suburb || "",
+    //     state: polygon.address?.state || "",
+    //     country: polygon.address?.country || ""
+    // };
+
+    // const filteredForSidebar = getFilteredArticles();
+    // updateSidebarWithArticles(filteredForSidebar);
+
+    // const pointsArticles = getFilteredArticles(true);
+    // const polygonsArticles = getFilteredArticles();
+
+    // const combinedArticles = pointsArticles.map(a => ({...a, __type: "Point"}))
+    //     .concat(polygonsArticles.map(a => ({...a, __type: "PolygonOrMultiPolygon"})));
+
+    // showArticles(combinedArticles);
+}

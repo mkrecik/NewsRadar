@@ -15,12 +15,12 @@ export var baseLayers = {
   };
 
 export const categoryIcons = {
-    "Wydarzenia": L.icon({ iconUrl: 'lucide/wydarzenia.svg'}),
-    "Polityka": L.icon({ iconUrl: 'lucide/polityka.svg'}),
-    "Gospodarka i Społeczeństwo": L.icon({ iconUrl: 'lucide/gospodarka.svg'}),
-    "Kultura": L.icon({ iconUrl: 'lucide/kultura.svg'}),
-    "Sport": L.icon({ iconUrl: 'lucide/sport.svg'}),
-    "Pogoda i Natura": L.icon({ iconUrl: 'lucide/pogoda.svg'}),
+    "Wydarzenia": L.icon({ iconUrl: 'newspaper/lucide/wydarzenia.svg'}),
+    "Polityka": L.icon({ iconUrl: 'newspaper/lucide/polityka.svg'}),
+    "Gospodarka i Społeczeństwo": L.icon({ iconUrl: 'newspaper/lucide/gospodarka.svg'}),
+    "Kultura": L.icon({ iconUrl: 'newspaper/lucide/kultura.svg'}),
+    "Sport": L.icon({ iconUrl: 'newspaper/lucide/sport.svg'}),
+    "Pogoda i Natura": L.icon({ iconUrl: 'newspaper/lucide/pogoda.svg'}),
     // "Inne": L.icon({ iconUrl: 'lucide/inne.svg'})
   };
 
@@ -41,4 +41,31 @@ export const categoryLayers = {
     "Kultura": L.layerGroup(),
     "Pogoda i Natura": L.layerGroup(),
     // "Inne": L.layerGroup()
+};
+
+export const polygonLevelStyles = {
+    country: {
+        color: "#999999",
+        fillColor: "#cccccc",
+        fillOpacity: 0.1,
+        weight: 1
+    },
+    state: {
+        color: "#666666",
+        fillColor: "#bbbbbb",
+        fillOpacity: 0.2,
+        weight: 2
+    },
+    county: {
+        color: "#3D3D3D",
+        fillColor: "#aaaaaa",
+        fillOpacity: 0.3,
+        weight: 2.5
+    },
+    default: {
+        color: "#222222",
+        fillColor: "#aaaaaa",
+        fillOpacity: 0.1,
+        weight: 1
+    }
 };

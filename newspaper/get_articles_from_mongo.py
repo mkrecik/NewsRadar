@@ -5,9 +5,9 @@ from bson.json_util import dumps
 from bson import ObjectId
 import json
 
-from api import MONGO_URI
+from .api import MONGO_URI
 
-# to run server: uvicorn get_articles_from_mongo:app --reload
+# to run server: uvicorn newspaper.get_articles_from_mongo:app --reload
 # then run frontend
 
 app = FastAPI()
@@ -22,11 +22,19 @@ app.add_middleware(
 
 client = MongoClient(MONGO_URI)
 db = client["newspaper"]
-collection = db["articles"]
+collection_articles = db["articles"]
+collection_polygons = db["polygons"]
 
 @app.get("/articles")
 def get_articles():
-    results = collection.find({
+    results = collection_articles.find({
         "geocode_result.geometry": {"$exists": True}
     })
     return json.loads(dumps(results)) 
+
+@app.get("/polygons")
+def get_polygons():
+    results = collection_polygons.find({
+        "geometry.type": { "$in": ["Polygon", "MultiPolygon"] }
+    })
+    return json.loads(dumps(results))
