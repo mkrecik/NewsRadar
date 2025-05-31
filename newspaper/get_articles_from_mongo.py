@@ -4,8 +4,9 @@ from pymongo import MongoClient
 from bson.json_util import dumps
 from bson import ObjectId
 import json
+import os
 
-from .api import MONGO_URI
+MONGO_URI = os.environ["MONGO_URI"]
 
 # to run server: uvicorn newspaper.get_articles_from_mongo:app --reload
 # then run frontend
