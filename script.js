@@ -110,6 +110,7 @@ function process_geometry(geometry, category, source, location, article, date, s
 }
 
 // Get data 
+// fetch('http://127.0.0.1:8000/articles')
 fetch('https://wiadomo.onrender.com/articles')
   .then(response => response.json())
   .then(data => {
@@ -126,6 +127,7 @@ fetch('https://wiadomo.onrender.com/articles')
     updateInfoBox(allArticles);
   });
 
+// fetch('http://127.0.0.1:8000/polygons')
 fetch('https://wiadomo.onrender.com/polygons')
   .then(response => response.json())
   .then(polygons => {
@@ -163,7 +165,6 @@ fetch('https://wiadomo.onrender.com/polygons')
     });
     console.log(`Załadowano ${polygons.length} poligonów`);
   });
-
 
 // Category layers toggle
 Object.values(categoryLayers).forEach(layer => layer.addTo(map));
@@ -327,6 +328,32 @@ window.addEventListener('DOMContentLoaded', () => {
   });
 });
 
+function pluralize(n, forms) {
+    return (n === 1) ? forms[0] :
+           (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) ? forms[1] :
+           forms[2];
+}
+
+function timeAgo(dateString) {
+    const now = new Date();
+    const articleDate = new Date(dateString);
+
+    const diffMs = now - articleDate;
+    const diffSeconds = Math.floor(diffMs / 1000);
+    const diffMinutes = Math.floor(diffSeconds / 60);
+    const diffHours = Math.floor(diffMinutes / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffSeconds < 60) return `${diffSeconds} ${pluralize(diffSeconds, ["sekunda", "sekundy", "sekund"])} temu`;
+    if (diffMinutes < 60) return `${diffMinutes} ${pluralize(diffMinutes, ["minuta", "minuty", "minut"])} temu`;
+    if (diffHours < 24) return `${diffHours} ${pluralize(diffHours, ["godzina", "godziny", "godzin"])} temu`;
+    if (diffDays === 1) return `wczoraj`;
+    return `${diffDays} ${pluralize(diffDays, ["dzień", "dni", "dni"])} temu`;
+}
+
+// normalna data:
+// <p class="popup-article-date">${article.date ? new Date(article.date).toLocaleDateString('pl-PL') : 'Brak daty'}</p>
+
 // Sidebar
 function addArticleToSidebar(article) {
   const sidebarContent = document.querySelector('.sidebar-content');
@@ -348,7 +375,7 @@ function addArticleToSidebar(article) {
           <p class="popup-article-location">${location}</p>
           <p class="popup-article-source">${article.source.replace(/^https?:\/\//, '')}</p>
         </div>
-        <p class="popup-article-date">${article.date ? new Date(article.date).toLocaleDateString('pl-PL') : 'Brak daty'}</p>
+        <p class="popup-article-date">${article.date ? timeAgo(article.date) : 'brak daty'}</p>
       </div>
       <p class="popup-article-summary">${article.summary}</p>
     </div>`;
@@ -565,11 +592,11 @@ function updateLocationLabelFromMapCenter(map) {
 
       if (mapZoomLevel > 11
       ) {
-        label = address.administrative || address.county || address.city || address.town || address.municipality || address.suburb  || "Nieznana lokalizacja";
+        label = address.administrative || address.county || address.city || address.town || address.municipality || address.suburb  || "Przybliż na ląd";
       } else if (mapZoomLevel > 8) {
         label = address.state || "Przybliż na ląd";
       } else {
-        label = address.country || "Nieznane";
+        label = address.country || "Przybliż na ląd";
       }
 
       const locationBtn = document.getElementById("current-location-button");
@@ -596,7 +623,7 @@ function updateLocationLabelFromMapCenter(map) {
     })
     .catch(() => {
       const locationBtn = document.getElementById("current-location-button");
-      if (locationBtn) locationBtn.textContent = "Nieznane";
+      if (locationBtn) locationBtn.textContent = "Przybliż na ląd";
     });
 
 }

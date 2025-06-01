@@ -112,8 +112,8 @@ def extract_category(url, text, model = model_gemini):
                 }
             ],
             extra_headers={
-                "HTTP-Referer": "http://localhost",
-                "X-Title": "NewsRadar"
+                "HTTP-Referer": "https://mkrecik.github.io/WiadoMo/",
+                "X-Title": "WiadoMo"
             }
         )
         if completion and completion.choices:
@@ -128,6 +128,13 @@ def extract_category(url, text, model = model_gemini):
         print("Błąd w extract_category:", e)
         return "brak"
 
+prompt_MP = "Z tekstu wyodrębnij najdokładniejszą lokalizację - miejsce wydarzenia artykułu."
+"(np. budynek lub obiekt, pełny adres lub jeżeli nie ma dokładnego miejsca -  miejscowość, stan lub kraj) w oryginalnej nazwie. "
+"Zwróć TYLKO lokalizację, bez cytowania lub komentarzy. "
+"Jeśli znajdziesz więcej niż jedną lokalizację to zdecyduj która jest najważniejsza i najdokładniejsza "
+"i w której rzeczywiście coś się wydarzyło i czy dotyczy głównego tematu artykułu."
+"Jeśli nie da się przypisać lokalizacji, napisz tylko 'brak'. \n\n"
+
 def extract_location(text, model = model_gemini):
     try:
         completion = ai_client.chat.completions.create(
@@ -136,12 +143,18 @@ def extract_location(text, model = model_gemini):
                 {
                     "role": "system",
                     "content": (
-                    "Z tekstu wyodrębnij najdokładniejszą lokalizację - miejsce wydarzenia artykułu."
-                    "(np. budynek lub obiekt, pełny adres lub jeżeli nie ma dokładnego miejsca -  miejscowość, stan lub kraj) w oryginalnej nazwie. "
-                    "Zwróć TYLKO lokalizację, bez cytowania lub komentarzy. "
-                    "Jeśli znajdziesz więcej niż jedną lokalizację to zdecyduj która jest najważniejsza i najdokładniejsza "
-                    "i w której rzeczywiście coś się wydarzyło i czy dotyczy głównego tematu artykułu."
-                    "Jeśli nie da się przypisać lokalizacji, napisz tylko 'brak'. \n\n"
+                        "Twoim zadaniem jest wyznaczenie rzeczywistej lokalizacji zdarzenia opisywanego w artykule. "
+                        "Nie chodzi o miejsca przypadkowo wspomniane. "
+                        "Wybierz lokalizację, gdzie zdarzenie miało miejsce lub jakiej artykuł pośrednio dotyczy."
+                        "Może to być adres, ale także kraj, województwo, miasto itd. "
+                        "Jeśli jest kilka możliwych lokalizacji, wybierz tę: najbardziej pasującą (np. ulica, budynek, dzielnica) do treści artykułu. "
+                        "Pomijaj ogólne miejsca nieidentyfikowalne na mapie (np. 'szkoła', 'szpital' bez podania miasta). "
+                        "Pomijaj miejsca abstrakcyjne ('Internet', 'świat'), jeśli artykuł dotyczy lokalnego wydarzenia. "
+                        "Wynik podaj jako: pełną nazwę lokalizacji — od najbardziej szczegółowego poziomu do ogólnego: "
+                        "budynek, ulica, miasto, powiat (jeżeli jest konieczny w przypadku wsi), województwo, kraj. \n"
+                        "Jeśli artykuł nie zawiera żadnej identyfikowalnej lokalizacji - zwróć: \"brak\". \n"
+                        "Format odpowiedzi: czysty tekst, bez komentarzy, bez cytatów. \n"
+                        "Cel: umożliwienie geokodowania lokalizacji jako punkt lub poligon na mapie.\n\n"
                     )
                 },
                 {
@@ -150,8 +163,8 @@ def extract_location(text, model = model_gemini):
                 }
             ],
             extra_headers={
-                "HTTP-Referer": "http://localhost",
-                "X-Title": "NewsRadar"
+                "HTTP-Referer": "https://mkrecik.github.io/WiadoMo/",
+                "X-Title": "WiadoMo"
             }
         )
         return completion.choices[0].message.content.strip()
@@ -163,7 +176,7 @@ def extract_location(text, model = model_gemini):
 def get_aricles_urls(site, whitelist):
     article_urls = []
 
-    news_site = build(site, memorize_articles=False)
+    news_site = build(site, memorize_articles=True, language='pl', fetch_images=False, fetch_videos=False)
     site_urls = [article.url for article in news_site.articles]
     article_urls.extend(site_urls)
 
@@ -179,6 +192,23 @@ def get_aricles_urls(site, whitelist):
     print('Number of articles:', len(filtered_urls))
 
     return filtered_urls
+
+def get_urls_rss(feed_url):
+    response = requests.get(feed_url)
+    response.raise_for_status()
+
+    soup = BeautifulSoup(response.content, "xml")
+
+    # UWAGA: tylko linki w <item>
+    items = soup.find_all("item")
+    links = [item.find("link").text.strip() for item in items]
+
+    print(f"Znaleziono {len(links)} linków:")
+    for link in links:
+        print(link)
+
+    return links
+
 
 def geocode_points(query):
     url = "https://nominatim.openstreetmap.org/search"
@@ -242,7 +272,6 @@ def geocode(query):
     geometry_type = None
     address = result.get('address', {})
 
-    # USTALAMY type:
     if geojson and geojson.get('type') in ["Polygon", "MultiPolygon"]:
         geometry_type = geojson['type']
         result = {
@@ -321,7 +350,7 @@ def print_articles(site, whitelist):
     existing_urls = collection.distinct("url")
     article_urls = [url for url in article_urls if url not in existing_urls]
 
-    for i, article_url in enumerate(article_urls[:20]):
+    for i, article_url in enumerate(article_urls):
         try:
             print(f"[{i+1}/{len(article_urls)}] Article: {article_url}")
 
@@ -358,7 +387,8 @@ def print_articles(site, whitelist):
 
 
 def process_articles(site, whitelist, collection):
-    article_urls = get_aricles_urls(site, whitelist)
+    # article_urls = get_aricles_urls(site, whitelist)
+    article_urls = get_urls_rss("https://wydarzenia.interia.pl/feed")
 
     existing_urls = collection.distinct("url")
     article_urls = [url for url in article_urls if url not in existing_urls]
@@ -417,7 +447,8 @@ def process_articles(site, whitelist, collection):
                 "source": a.source_url,
                 "location": location,
                 "summary": summary,
-                "geocode_result": geocode_result
+                "save_date": datetime.now(timezone.utc).isoformat(),
+                "geocode_result": geocode_result,
             }
             articles_data.append(article_data)
 
@@ -491,7 +522,6 @@ def update_summary(collection):
         except Exception as e:
             print(f"Błąd podczas aktualizacji podsumowania dla: {url}\n{e}")
 
-
 def update_category(collection):
     for article in collection.find():
         url = article.get("url")
@@ -514,6 +544,42 @@ def update_category(collection):
         except Exception as e:
             print(f"Błąd podczas pobierania lub aktualizacji kategorii dla: {url}\n{e}")
 
+def update_location(collection):
+    for article in collection.find():
+        url = article.get("url")
+        if not url:
+            continue
+        if article.get("save_date"):
+            continue
+
+        try:
+            a = Article(url, language="pl")
+            a.download()
+            a.parse()
+            text = a.text.strip()
+
+            location = extract_location(text)
+            if location.strip().lower().rstrip('.') == "brak":
+                print(f"Brak lokalizacji dla: {article.get('title', url)}")
+                continue
+            geocode_result = geocode(location)
+            if geocode_result is None:
+                print(f"Brak geokodowania dla: {article.get('title', url)}")
+                continue
+            geometry_type = geocode_result.get("geometry", {}).get("type")
+            if geometry_type in ["Polygon", "MultiPolygon"]:
+                save_poligons(geocode_result, polygon_collection, location, url)
+                geocode_result["geometry"] = {
+                    "type": geometry_type
+                }
+
+            collection.update_one(
+                {"_id": article["_id"]},
+                {"$set": {"location": location, "geocode_result": geocode_result, "save_date": datetime.now(timezone.utc).isoformat()}}
+            )
+            print(f"Zaktualizowano lokalizację dla: {article.get('title', url)}")
+        except Exception as e:
+            print(f"Błąd podczas pobierania lub aktualizacji lokalizacji dla: {url}\n{e}")
 
 def update_geocode_json(path):
     articles_data = json.load(open(path, "r", encoding="utf-8"))
@@ -690,13 +756,16 @@ def remove_duplicate_title_date(collection):
     print("============================================\n")
 
 if __name__ == "__main__":
-    articles_data = process_articles(site, whitelist, collection)
-    # print_articles(site, whitelist)
+    # articles_data = process_articles(site, whitelist, collection)
+    # # print_articles(site, whitelist)
 
-    # Save to MongoDB
-    if articles_data:
-        collection.insert_many(articles_data)
-        print(f"Saved {len(articles_data)} articles to MongoDB.")
+    # # Save to MongoDB
+    # if articles_data:
+    #     collection.insert_many(articles_data)
+    #     print(f"Saved {len(articles_data)} articles to MongoDB.")
+
+
+    update_location(collection)
 
     # remove_duplicate_title_date(collection)
     # update_geocode(collection, polygon_collection)
