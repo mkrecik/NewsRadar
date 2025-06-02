@@ -1,7 +1,18 @@
 import { handleSearch, style_popup, locateUser } from './newspaper/functions.js';
 import { baseLayers, categoryIcons, categoryColors, categoryLayers, polygonLevelStyles } from './newspaper/constants.js';
 
-var map = L.map('map').setView([52.03993467110199, 19.286734471610345], 7);
+function isMobileSafari() {
+  const ua = window.navigator.userAgent;
+  return (
+    /iP(ad|hone|od)/.test(ua) &&
+    /WebKit/.test(ua) &&
+    !/CriOS|FxiOS|OPiOS|mercury/i.test(ua)
+  );
+}
+
+const map = L.map('map', {
+  closePopupOnClick: isMobileSafari() ? false : true
+}).setView([52.03993467110199, 19.286734471610345], 7);
 
 map.createPane('polygons');
 map.getPane('polygons').style.zIndex = 400;
