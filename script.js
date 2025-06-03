@@ -11,7 +11,8 @@ function isMobileSafari() {
 }
 
 const map = L.map('map', {
-  closePopupOnClick: isMobileSafari() ? false : true
+  closePopupOnClick: isMobileSafari() ? false : true,
+   maxZoom: 18,
 }).setView([52.03993467110199, 19.286734471610345], 7);
 
 map.createPane('polygons');
@@ -22,6 +23,7 @@ map.getPane('points').style.zIndex = 600;
 
 const markerLayer = L.layerGroup().addTo(map);
 const polygonLayer = L.layerGroup().addTo(map);
+const categoryClusters = {};
 
 
 let activeCategories = new Set(Object.keys(categoryLayers));
@@ -29,10 +31,15 @@ let allArticles = [];
 
 function showArticles(articles) {
   markerLayer.clearLayers();
+  
+  Object.keys(categoryClusters).forEach(cat => {
+    categoryClusters[cat].clearLayers();
+  });
 
   Object.keys(categoryLayers).forEach(cat => {
     categoryLayers[cat].clearLayers();
   });
+  
 
   const showPoints = map.hasLayer(markerLayer);
   const showPolygons = map.hasLayer(polygonLayer);
@@ -76,14 +83,14 @@ function process_geometry(geometry, category, source, location, article, date, s
       const [lon, lat] = geometry.coordinates;
       const marker = L.circleMarker([lat, lon], {
         pane: 'points',
-        radius: 7,
+        radius: 9,
         color: color,
         fillColor: color,
         fillOpacity: 0.8,
         weight: 1
-      }).addTo(markerLayer);
-      categoryLayers[category]?.addLayer(marker);
+      });
       marker.bindPopup(style_popup(category, source, location, date, article));
+      categoryClusters[category]?.addLayer(marker);
     }
 
     if (geometry.type === "Polygon" && showPolygons) {
@@ -189,6 +196,38 @@ const CategoryToggleControl = L.Control.extend({
       btn.style.backgroundColor = color;
       btn.dataset.category = category;
       btn.classList.add('active');
+
+      if (!categoryClusters[category]) {
+        categoryClusters[category] = L.markerClusterGroup({
+          disableClusteringAtZoom: 13,
+          spiderfyOnMaxZoom: true,
+          showCoverageOnHover: false,
+          iconCreateFunction: function (cluster) {
+            const count = cluster.getChildCount();
+            const color = categoryColors[category] || '#000';
+
+            const size = Math.max(17, Math.min(60, 17 + Math.log(count) * 10));
+
+            return L.divIcon({
+              html: `<div style="
+                        background-color: ${color}; 
+                        border-radius: 50%; 
+                        width: ${size}px; 
+                        height: ${size}px; 
+                        display: flex; 
+                        align-items: center; 
+                        justify-content: center; 
+                        color: white; 
+                        font-weight: bold;
+                      "></div>`,
+              className: 'custom-cluster-icon',
+              iconSize: L.point(size, size)
+            });
+          }
+        });
+
+        map.addLayer(categoryClusters[category]);
+      }
 
       btn.onclick = function () {
         const cat = this.dataset.category;
