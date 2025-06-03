@@ -130,9 +130,7 @@ fetch('https://wiadomo.onrender.com/articles')
     updateLocationLabelFromMapCenter(map);
     updateSidebarWithArticles(filteredForSidebar);
 
-    const mapArticles = allArticles.filter(article =>
-      activeCategories.has(article.category)
-    );
+const mapArticles = getFilteredArticles(true); 
     showArticles(mapArticles);
 
     updateInfoBox(allArticles);
@@ -212,9 +210,7 @@ const CategoryToggleControl = L.Control.extend({
         const filteredForSidebar = getFilteredArticles();
         updateSidebarWithArticles(filteredForSidebar);
 
-        const mapArticles = allArticles.filter(article =>
-          activeCategories.has(article.category)
-        );
+        const mapArticles = getFilteredArticles(true); 
         showArticles(mapArticles);
 
       };
@@ -264,9 +260,7 @@ map.on('overlayadd', function(e) {
     
     updateSidebarWithArticles(filteredForSidebar);
 
-    const mapArticles = allArticles.filter(article =>
-      activeCategories.has(article.category)
-    );
+    const mapArticles = getFilteredArticles(true); 
     showArticles(mapArticles);
   }
 });
@@ -276,9 +270,7 @@ map.on('overlayremove', function(e) {
     const filteredForSidebar = getFilteredArticles();
     updateSidebarWithArticles(filteredForSidebar);
 
-    const mapArticles = allArticles.filter(article =>
-      activeCategories.has(article.category)
-    );
+    const mapArticles = getFilteredArticles(true); 
     showArticles(mapArticles);
   }
 });
@@ -496,9 +488,7 @@ document.querySelectorAll('.date-filter-btn').forEach(btn => {
     updateLocationLabelFromMapCenter(map);
     updateSidebarWithArticles(filteredForSidebar);
 
-    const mapArticles = allArticles.filter(article =>
-      activeCategories.has(article.category)
-    );
+    const mapArticles = getFilteredArticles(true); 
     showArticles(mapArticles);
 
   });

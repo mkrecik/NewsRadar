@@ -668,14 +668,22 @@ p.popup-article-summary {
         background-size: 26px 26px !important; 
 
     }
+
+    #map-controls {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+    }
     
     .category-toggle-control  {
         gap: 7px;
         margin-bottom: 20px;
+        right: 
     }
 
     .category-toggle-control.leaflet-control {
         margin-bottom:55px;
+        margin-right: 0;
     }
 
 
@@ -691,7 +699,7 @@ p.popup-article-summary {
     .left-map-controls-container {
         position: absolute;
         bottom: 85px;
-        left: 20px;
+        left: 10px;
         z-index: 1000;
     }
 
@@ -708,19 +716,24 @@ p.popup-article-summary {
 
 
     .reset-view-button img, .info-button img {
-        width: 28px;
-        height: 28px;
+        width: 24px;
+        height: 24px;
     }
 
     .reset-view-button, .info-button {
         width: 28px;
         height: 28px;
-        padding: 8px ;
+        padding: 6px ;
     }
 
     .zoom-btn {
-        width: 44px;
-        height: 44px;
+        width: 40px;
+        height: 40px;
+    }
+
+    .zoom-out img, .zoom-in img{
+        width: 28px;
+        height: 28px;
     }
 
     .info-text p {
@@ -734,6 +747,12 @@ p.popup-article-summary {
 
     .info-footer p {
         font-size: 9px;
+    }
+
+    .info-container {
+        position: absolute;
+        bottom: 80px;
+        left: 60px;
     }
 
 
