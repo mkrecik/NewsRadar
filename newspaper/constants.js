@@ -44,28 +44,28 @@ export const categoryLayers = {
 };
 
 export const polygonLevelStyles = {
-    country: {
-        color: "#999999",
+    0: {
+        color: "#9F9F9F",
         fillColor: "#cccccc",
         fillOpacity: 0.1,
-        weight: 1
+        weight: 2
     },
-    state: {
-        color: "#666666",
+    1: {
+        color: "#8F8F8F",
         fillColor: "#bbbbbb",
         fillOpacity: 0.2,
         weight: 2
     },
-    county: {
-        color: "#3D3D3D",
+    2: {
+        color: "#707070",
         fillColor: "#aaaaaa",
         fillOpacity: 0.3,
-        weight: 2.5
+        weight: 2
     },
-    default: {
-        color: "#222222",
+    3: {
+        color: "#525252",
         fillColor: "#aaaaaa",
         fillOpacity: 0.1,
-        weight: 1
+        weight: 2
     }
 };

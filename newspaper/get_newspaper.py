@@ -148,7 +148,7 @@ def extract_location(text, model = model_gemini):
                         "Wybierz lokalizację, gdzie zdarzenie miało miejsce lub jakiej artykuł pośrednio dotyczy."
                         "Może to być adres, ale także kraj, województwo, miasto itd. "
                         "Jeśli jest kilka możliwych lokalizacji, wybierz tę: najbardziej pasującą (np. ulica, budynek, dzielnica) do treści artykułu. "
-                        "Pomijaj ogólne miejsca nieidentyfikowalne na mapie (np. 'szkoła', 'szpital' bez podania miasta). "
+                        "Pomijaj ogólne miejsca nieidentyfikowalne na mapie (np. 'szkoła', 'szpital', 'ogród' bez podania miasta). "
                         "Pomijaj miejsca abstrakcyjne ('Internet', 'świat'), jeśli artykuł dotyczy lokalnego wydarzenia. "
                         "Wynik podaj jako: pełną nazwę lokalizacji — od najbardziej szczegółowego poziomu do ogólnego: "
                         "budynek, ulica, miasto, powiat (jeżeli jest konieczny w przypadku wsi), województwo, kraj. \n"
@@ -204,8 +204,6 @@ def get_urls_rss(feed_url):
     links = [item.find("link").text.strip() for item in items]
 
     print(f"Znaleziono {len(links)} linków:")
-    for link in links:
-        print(link)
 
     return links
 
@@ -282,12 +280,11 @@ def geocode(query):
             'address': address
         }
     else:
-        # fallback → Point
         result = {
             'geometry': {
-                'type': 'Point'
+                'type': 'Point',
+                'coordinates': [lon, lat]
             },
-            'center': {'lat': lat, 'lon': lon},
             'address': address
         }
 
@@ -469,7 +466,7 @@ def update_date(collection):
 
 def update_geocode(collection, polygon_collection):
     for article in collection.find():
-        if "geocode_result" not in article or article["geocode_result"] is None or article["geocode_result"].get("geometry") is None:
+        if article.get("geocode_result") or article.get("geocode_result.geometry.coordinates"):
             location = article.get("location")
             if location:
                 geocode_result = geocode(location)
@@ -480,11 +477,12 @@ def update_geocode(collection, polygon_collection):
                 geometry_type = geocode_result.get("geometry", {}).get("type")
 
                 if geometry_type in ["Polygon", "MultiPolygon"]:
-                    save_poligons(geocode_result, polygon_collection, location, article["url"])
+                    # save_poligons(geocode_result, polygon_collection, location, article["url"])
 
-                    geocode_result["geometry"] = {
-                        "type": geometry_type
-                    }
+                    # geocode_result["geometry"] = {
+                    #     "type": geometry_type
+                    # }
+                    continue
 
                 collection.update_one(
                     {"_id": article["_id"]},
@@ -560,7 +558,8 @@ def update_location(collection):
 
             location = extract_location(text)
             if location.strip().lower().rstrip('.') == "brak":
-                print(f"Brak lokalizacji dla: {article.get('title', url)}")
+                collection.delete_one({"_id": article["_id"]})
+                print(f"Usunięto artykuł bez lokalizacji: {article.get('title', url)}")
                 continue
             geocode_result = geocode(location)
             if geocode_result is None:
@@ -756,16 +755,16 @@ def remove_duplicate_title_date(collection):
     print("============================================\n")
 
 if __name__ == "__main__":
-    # articles_data = process_articles(site, whitelist, collection)
-    # # print_articles(site, whitelist)
+    articles_data = process_articles(site, whitelist, collection)
+    # print_articles(site, whitelist)
 
-    # # Save to MongoDB
-    # if articles_data:
-    #     collection.insert_many(articles_data)
-    #     print(f"Saved {len(articles_data)} articles to MongoDB.")
+    # Save to MongoDB
+    if articles_data:
+        collection.insert_many(articles_data)
+        print(f"Saved {len(articles_data)} articles to MongoDB.")
 
 
-    update_location(collection)
+    # update_location(collection)
 
     # remove_duplicate_title_date(collection)
     # update_geocode(collection, polygon_collection)

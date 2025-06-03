@@ -6,6 +6,7 @@ from bson import ObjectId
 import json
 import os
 
+# from .api import MONGO_URI
 MONGO_URI = os.environ["MONGO_URI"]
 
 # to run server: uvicorn newspaper.get_articles_from_mongo:app --reload
@@ -34,8 +35,31 @@ def get_articles():
     return json.loads(dumps(results)) 
 
 @app.get("/polygons")
-def get_polygons():
-    results = collection_polygons.find({
+def get_polygons(limit: int = 10, offset: int = 0, level: str = None):
+    query = {
         "geometry.type": { "$in": ["Polygon", "MultiPolygon"] }
-    })
+    }
+
+    if level == "country":
+        query["address.country"] = { "$exists": True }
+        query["address.state"] = { "$exists": False }
+        query["address.region"] = { "$exists": False }
+    elif level == "region":
+        query["$or"] = [
+            { "address.state": { "$exists": True } },
+            { "address.region": { "$exists": True } },
+            { "address.province": { "$exists": True } }
+        ]
+    elif level == "county":
+        query["$or"] = [
+            { "address.county": { "$exists": True } },
+            { "address.administrative": { "$exists": True } },
+            { "address.district": { "$exists": True } },  # DODANE
+            { "address.city": { "$exists": True } },
+            { "address.town": { "$exists": True } },
+        ]
+
+
+    results = collection_polygons.find(query).skip(offset).limit(limit)
+
     return json.loads(dumps(results))

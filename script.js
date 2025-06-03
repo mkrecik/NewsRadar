@@ -15,14 +15,25 @@ const map = L.map('map', {
    maxZoom: 18,
 }).setView([52.03993467110199, 19.286734471610345], 7);
 
-map.createPane('polygons');
-map.getPane('polygons').style.zIndex = 400;
+map.createPane('polygons-country');
+map.getPane('polygons-country').style.zIndex = 300;
+
+map.createPane('polygons-region');
+map.getPane('polygons-region').style.zIndex = 400;
+
+map.createPane('polygons-county');
+map.getPane('polygons-county').style.zIndex = 500;
+
 
 map.createPane('points');
 map.getPane('points').style.zIndex = 600;
 
 const markerLayer = L.layerGroup().addTo(map);
-const polygonLayer = L.layerGroup().addTo(map);
+
+const polygonLayerCountry = L.layerGroup().addTo(map);
+const polygonLayerRegion = L.layerGroup().addTo(map);
+const polygonLayerCounty = L.layerGroup().addTo(map);
+
 const categoryClusters = {};
 
 
@@ -42,7 +53,9 @@ function showArticles(articles) {
   
 
   const showPoints = map.hasLayer(markerLayer);
-  const showPolygons = map.hasLayer(polygonLayer);
+  const showPolygons = map.hasLayer(polygonLayerCountry) ||
+    map.hasLayer(polygonLayerRegion) ||
+    map.hasLayer(polygonLayerCounty);
 
   let pointsCount = 0;
   let polygonCount = 0;
@@ -67,12 +80,11 @@ function showArticles(articles) {
 
     const geometryType = geometry?.type;
     if (geometryType === "Point" && showPoints) pointsCount++;
-    if ((geometryType === "Polygon" || geometryType === "MultiPolygon") && showPolygons) polygonCount++;
 
     process_geometry(geometry, category, source, location, article, articleDate, showPoints, showPolygons);
   });
 
-  console.log(`Wyświetlono: ${pointsCount} punktów, ${polygonCount} poligonów`);
+  console.log(`Wyświetlono: ${pointsCount} punktów`);
 }
 
 function process_geometry(geometry, category, source, location, article, date, showPoints, showPolygons) {
@@ -92,42 +104,10 @@ function process_geometry(geometry, category, source, location, article, date, s
       marker.bindPopup(style_popup(category, source, location, date, article));
       categoryClusters[category]?.addLayer(marker);
     }
-
-    if (geometry.type === "Polygon" && showPolygons) {
-      const polygon = L.polygon(
-        geometry.coordinates.map(coord => coord.map(c => [c[1], c[0]])),
-        {
-          pane: 'polygons',
-          color: color,
-          fillColor: color,
-          fillOpacity: 0.1,
-          weight: 2
-        }
-      ).addTo(polygonLayer);
-      categoryLayers[category]?.addLayer(polygon);
-      polygon.bindPopup(style_popup(category, source, location, date, article));
-    }
-
-    if (geometry.type === "MultiPolygon" && showPolygons) {
-      geometry.coordinates.forEach(polygonCoords => {
-        const polygon = L.polygon(
-          polygonCoords.map(ring => ring.map(coord => [coord[1], coord[0]])),
-          {
-            pane: 'polygons',
-            color: color,
-            fillColor: color,
-            fillOpacity: 0.1,
-            weight: 2
-          }
-        ).addTo(polygonLayer);
-        categoryLayers[category]?.addLayer(polygon);
-        polygon.bindPopup(style_popup(category, source, location, date, article));
-      });
-    }
   }
 }
 
-// Get data 
+// Get article data 
 // fetch('http://127.0.0.1:8000/articles')
 fetch('https://wiadomo.onrender.com/articles')
   .then(response => response.json())
@@ -137,50 +117,76 @@ fetch('https://wiadomo.onrender.com/articles')
     updateLocationLabelFromMapCenter(map);
     updateSidebarWithArticles(filteredForSidebar);
 
-const mapArticles = getFilteredArticles(true); 
+    const mapArticles = getFilteredArticles(true); 
     showArticles(mapArticles);
-
     updateInfoBox(allArticles);
-  });
+    
+});
 
-// fetch('http://127.0.0.1:8000/polygons')
-fetch('https://wiadomo.onrender.com/polygons')
-  .then(response => response.json())
-  .then(polygons => {
-    polygonLayer.clearLayers();
+// Get polygons data in batches of 10
+// const baseurl = 'http://127.0.0.1:8000/polygons'
+const baseurl = 'https://wiadomo.onrender.com/polygons';
+function loadPolygons(level, batchSize = 10) {
+    let offset = 0;
 
-    polygons.sort((a, b) => getPolygonLevel(a) - getPolygonLevel(b));
+    function loadNextBatch() {
+        fetch(`${baseurl}?level=${level}&limit=${batchSize}&offset=${offset}`)
+            .then(response => response.json())
+            .then(polygons => {
+                console.log(`Fetched ${polygons.length} polygons at offset ${offset}`);
 
-    polygons.forEach(polygon => {
-        const geometry = polygon.geometry;
-        const style = getPolygonStyle(polygon);
+                polygons.forEach(polygon => {
+                    const geometry = polygon.geometry;
+                    const style = getPolygonStyle(polygon);
 
-        if (geometry.type === "Polygon") {
-            const poly = L.polygon(
-                geometry.coordinates.map(coord => coord.map(c => [c[1], c[0]])),
-                style
-            ).addTo(polygonLayer);
+                    const targetLayer = (
+                        level === "country" ? polygonLayerCountry :
+                        level === "region" ? polygonLayerRegion :
+                        polygonLayerCounty
+                    );
 
-            poly.on('click', function() {
-                zoomToPolygonAndFilter(polygon, poly);
-            });
-        }
+                    if (geometry.type === "Polygon" && Array.isArray(geometry.coordinates)) {
+                        const poly = L.polygon(
+                            geometry.coordinates.map(coord => coord.map(c => [c[1], c[0]])),
+                            style
+                        ).addTo(targetLayer);
 
-        if (geometry.type === "MultiPolygon") {
-            geometry.coordinates.forEach(polygonCoords => {
-                const poly = L.polygon(
-                    polygonCoords.map(ring => ring.map(c => [c[1], c[0]])),
-                    style
-                ).addTo(polygonLayer);
+                        poly.on('click', function() {
+                            zoomToPolygonAndFilter(polygon, poly);
+                        });
+                    }
 
-                poly.on('click', function() {
-                    zoomToPolygonAndFilter(polygon, poly);
+                    if (geometry.type === "MultiPolygon" && Array.isArray(geometry.coordinates)) {
+                        geometry.coordinates.forEach(polygonCoords => {
+                            const poly = L.polygon(
+                                polygonCoords.map(ring => ring.map(coord => [coord[1], coord[0]])),
+                                style
+                            ).addTo(targetLayer);
+
+                            poly.on('click', function() {
+                                zoomToPolygonAndFilter(polygon, poly);
+                            });
+                        });
+                    }
+
                 });
+
+                if (polygons.length === batchSize) {
+                    offset += batchSize;
+                    setTimeout(loadNextBatch, 100); 
+                } else {
+                    console.log(`DONE loading level=${level}`);
+                }
             });
-        }
-    });
-    console.log(`Załadowano ${polygons.length} poligonów`);
-  });
+    }
+
+    loadNextBatch();
+}
+
+loadPolygons("county", 10);
+setTimeout(() => loadPolygons("region", 10), 1000);
+setTimeout(() => loadPolygons("country", 10), 5000);
+
 
 // Category layers toggle
 Object.values(categoryLayers).forEach(layer => layer.addTo(map));
@@ -292,11 +298,11 @@ searchInput.addEventListener("keydown", (event) => {
 });
 
 
-// Layer control
+const polygonLayers = [polygonLayerCountry, polygonLayerRegion, polygonLayerCounty];
+
 map.on('overlayadd', function(e) {
-  if (e.layer === polygonLayer || e.layer === markerLayer) {
+  if (polygonLayers.includes(e.layer) || e.layer === markerLayer) {
     const filteredForSidebar = getFilteredArticles();
-    
     updateSidebarWithArticles(filteredForSidebar);
 
     const mapArticles = getFilteredArticles(true); 
@@ -305,7 +311,7 @@ map.on('overlayadd', function(e) {
 });
 
 map.on('overlayremove', function(e) {
-  if (e.layer === polygonLayer || e.layer === markerLayer) {
+  if (polygonLayers.includes(e.layer) || e.layer === markerLayer) {
     const filteredForSidebar = getFilteredArticles();
     updateSidebarWithArticles(filteredForSidebar);
 
@@ -314,10 +320,14 @@ map.on('overlayremove', function(e) {
   }
 });
 
+
 var overlays = {
   "Punkty": markerLayer,
-  "Poligony": polygonLayer
+  "Kraje": polygonLayerCountry,
+  "Województwa": polygonLayerRegion,
+  "Powiaty": polygonLayerCounty
 };
+
 
 baseLayers["CartoDB"].addTo(map);
 
@@ -547,23 +557,31 @@ function getFilteredArticles(skipLocationFilter = false) {
       const address = article.geocode_result?.address || {};
 
       if (mapZoomLevel <= 8) {
-        const isCountryOnly =
-          address.country === mapLocationFilter.country &&
-          !address.state && !address.city && !address.town && !address.village && !address.municipality;
-        if (!isCountryOnly) return false;
+          const isCountryOnly =
+              address.country === mapLocationFilter.country &&
+              !address.state && !address.region && !address.city && !address.town && !address.village && !address.municipality;
+          if (!isCountryOnly) return false;
       }
 
       if (mapZoomLevel > 8 && mapZoomLevel <= 11) {
-        const isStateOnly =
-          address.state === mapLocationFilter.state &&
-          !address.city && !address.town && !address.village && !address.municipality && !address.administrative && !address.county;
-        if (!isStateOnly) return false;
+          const isStateOnly =
+              (address.state === mapLocationFilter.state || address.region === mapLocationFilter.state || address.province === mapLocationFilter.state) &&
+              !address.city && !address.town && !address.village && !address.municipality && !address.administrative && !address.county && !address.district;
+          if (!isStateOnly) return false;
       }
 
       if (mapZoomLevel > 11) {
-        const articleCity =
-          address.administrative || address.county || address.city || address.town || address.municipality || address.suburb;
-        if (articleCity !== mapLocationFilter.county) return false;
+          const articleCity =
+              address.administrative ||
+              address.county ||
+              address.district ||
+              address.city ||
+              address.town ||
+              address.village ||
+              address.municipality ||
+              address.suburb;
+
+          if (articleCity !== mapLocationFilter.county) return false;
       }
     }
 
@@ -630,22 +648,51 @@ function updateLocationLabelFromMapCenter(map) {
       const address = data.address || {};
       let label = "Przybliż na ląd";
 
-      if (mapZoomLevel > 11
-      ) {
-        label = address.administrative || address.county || address.city || address.town || address.municipality || address.suburb  || "Przybliż na ląd";
+      if (mapZoomLevel > 11) {
+          label =
+              address.administrative ||
+              address.county ||
+              address.district ||
+              address.city ||
+              address.town ||
+              address.village ||
+              address.municipality ||
+              address.suburb ||
+              "Przybliż na ląd";
       } else if (mapZoomLevel > 8) {
-        label = address.state || "Przybliż na ląd";
+          label =
+              address.state ||
+              address.region ||
+              address.province ||
+              address.city ||
+              address.administrative ||
+              "Przybliż na ląd";
       } else {
-        label = address.country || "Przybliż na ląd";
+          label = address.country || "Przybliż na ląd";
       }
 
       const locationBtn = document.getElementById("current-location-button");
       if (locationBtn) locationBtn.textContent = label;
 
       mapLocationFilter = {
-        county: address.administrative || address.county || address.city || address.town || address.municipality || address.suburb || "",
-        state: address.state || "",
-        country: address.country || ""
+          county:
+              address.administrative ||
+              address.county ||
+              address.district ||
+              address.city ||
+              address.town ||
+              address.village ||
+              address.municipality ||
+              address.suburb ||
+              "",
+          state:
+              address.state ||
+              address.region ||
+              address.province ||
+              address.county || 
+              address.administrative ||
+              "",
+          country: address.country || ""
       };
 
       const filteredForSidebar = getFilteredArticles();
@@ -673,44 +720,55 @@ function isCountryPolygon(polygon) {
 }
 
 function isRegionPolygon(polygon) {
-    return polygon.address?.state && !(polygon.address?.county || polygon.address?.administrative || polygon.address?.city || polygon.address?.town);
+    return (
+        polygon.address?.state ||
+        polygon.address?.region ||
+        polygon.address?.province
+    ) && !(
+        polygon.address?.county ||
+        polygon.address?.administrative ||
+        polygon.address?.district ||
+        polygon.address?.city ||
+        polygon.address?.town ||
+        polygon.address?.village ||
+        polygon.address?.municipality
+    );
 }
 
 function isCountyPolygon(polygon) {
-    return polygon.address?.county || polygon.address?.administrative || polygon.address?.city || polygon.address?.town;
+    return (
+        polygon.address?.county ||
+        polygon.address?.administrative ||
+        polygon.address?.district ||
+        polygon.address?.city ||
+        polygon.address?.town ||
+        polygon.address?.village ||
+        polygon.address?.municipality
+    );
 }
 
+
 function getPolygonLevel(polygon) {
-    if (isCountryPolygon(polygon)) return 'country';
-    if (isRegionPolygon(polygon)) return 'state';
-    if (isCountyPolygon(polygon)) return 'county';
-    return 'default';
+    if (isCountryPolygon(polygon)) return 0;
+    if (isRegionPolygon(polygon)) return 1; 
+    if (isCountyPolygon(polygon)) return 2;  
+    return 3; 
 }
 
 function getPolygonStyle(polygon) {
+    const level = getPolygonLevel(polygon);
+    let pane = 'polygons';
+
+    if (level === 0) pane = 'polygons-country';
+    if (level === 1) pane = 'polygons-region';
+    if (level === 2) pane = 'polygons-county';
+
     return {
-        pane: 'polygons',
-        ...polygonLevelStyles[getPolygonLevel(polygon)]
+        pane: pane,
+        ...polygonLevelStyles[level]
     };
 }
 
 function zoomToPolygonAndFilter(polygon, polyLayer) {
     map.fitBounds(polyLayer.getBounds());
-
-    // mapLocationFilter = {
-    //     county: polygon.address?.administrative || polygon.address?.county || polygon.address?.city || polygon.address?.town || polygon.address?.municipality || polygon.address?.suburb || "",
-    //     state: polygon.address?.state || "",
-    //     country: polygon.address?.country || ""
-    // };
-
-    // const filteredForSidebar = getFilteredArticles();
-    // updateSidebarWithArticles(filteredForSidebar);
-
-    // const pointsArticles = getFilteredArticles(true);
-    // const polygonsArticles = getFilteredArticles();
-
-    // const combinedArticles = pointsArticles.map(a => ({...a, __type: "Point"}))
-    //     .concat(polygonsArticles.map(a => ({...a, __type: "PolygonOrMultiPolygon"})));
-
-    // showArticles(combinedArticles);
 }
