@@ -76,7 +76,7 @@ function process_geometry(geometry, category, source, location, article, date, s
       const [lon, lat] = geometry.coordinates;
       const marker = L.circleMarker([lat, lon], {
         pane: 'points',
-        radius: 5,
+        radius: 7,
         color: color,
         fillColor: color,
         fillOpacity: 0.8,

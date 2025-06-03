@@ -43,6 +43,11 @@ function setupMobileInteractions() {
     }
   };
 
+
+  dateFilters.addEventListener("click", function(event) {
+    event.stopPropagation();
+  });
+
   documentClickHandler = function (event) {
     if (
       !searchContainer.contains(event.target) &&
@@ -57,6 +62,35 @@ function setupMobileInteractions() {
   searchButton.addEventListener("click", searchClickHandler);
   filterButton.addEventListener("click", filterClickHandler);
   document.addEventListener("click", documentClickHandler);
+
+
+  const sheet = document.querySelector('.sidebar');
+
+  let startY = 0;
+  let startHeight = 0;
+  let isDragging = false;
+
+  sheet.addEventListener('touchstart', (e) => {
+    startY = e.touches[0].clientY;
+    startHeight = sheet.offsetHeight;
+    isDragging = true;
+    sheet.style.transition = 'none'
+  });
+
+  sheet.addEventListener('touchmove', (e) => {
+    if (!isDragging) return;
+
+    const deltaY = startY - e.touches[0].clientY;
+    const newHeight = Math.min(window.innerHeight * 0.9, Math.max(70, startHeight + deltaY));
+
+    sheet.style.height = `${newHeight}px`;
+  });
+
+  sheet.addEventListener('touchend', () => {
+    isDragging = false;
+    sheet.style.transition = 'height 0.2s ease'; 
+  });
+
 }
 
 function cleanupMobileInteractions() {
@@ -78,9 +112,17 @@ function cleanupMobileInteractions() {
   dateFilters.style.opacity = "";
   dateFilters.style.visibility = "";
 
+  const sheet = document.querySelector('.sidebar');
+  if (sheet) {
+    sheet.style.height = "";
+    sheet.style.transition = "";
+  }
+
 
   isSearchVisible = false;
   isFilterVisible = false;
+
+
 }
 
 const mobileQuery = window.matchMedia("(max-width: 668px)");
