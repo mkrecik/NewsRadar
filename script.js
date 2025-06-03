@@ -199,7 +199,7 @@ const CategoryToggleControl = L.Control.extend({
 
       if (!categoryClusters[category]) {
         categoryClusters[category] = L.markerClusterGroup({
-          disableClusteringAtZoom: 13,
+          disableClusteringAtZoom: 12,
           spiderfyOnMaxZoom: true,
           showCoverageOnHover: false,
           iconCreateFunction: function (cluster) {
@@ -219,7 +219,7 @@ const CategoryToggleControl = L.Control.extend({
                         justify-content: center; 
                         color: white; 
                         font-weight: bold;
-                      "></div>`,
+                      ">${count}</div>`,
               className: 'custom-cluster-icon',
               iconSize: L.point(size, size)
             });
