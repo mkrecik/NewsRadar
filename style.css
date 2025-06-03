@@ -537,6 +537,7 @@ p.popup-article-summary {
   justify-content: center;
   align-items: center;
   padding: 5px 0;
+  color: black !important;
 }
 
 #current-location-button {
@@ -589,7 +590,7 @@ p.popup-article-summary {
         left: 0;
         right: 0;
         height: 60px;
-        max-height: 75%;
+        max-height: 70%;
         overflow: hidden;
         transition: height 0.2s ease;
     }
@@ -610,9 +611,13 @@ p.popup-article-summary {
         position: fixed;
         justify-content: start;
         top: 0;
-        left: 10px;
-        width: 100%;
+        left: 0px;
         z-index: -1 !important;
+
+    }
+
+    .logo img {
+        width: 200px;;
     }
 
     #search-input {
