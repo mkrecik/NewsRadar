@@ -203,7 +203,7 @@ def get_urls_rss(feed_url):
     items = soup.find_all("item")
     links = [item.find("link").text.strip() for item in items]
 
-    print(f"Znaleziono {len(links)} linków:")
+    print(f"\nZnaleziono {len(links)} linków:")
 
     return links
 
@@ -383,9 +383,12 @@ def print_articles(site, whitelist):
             print(f"Error processing {article_url}: {e}")
 
 
-def process_articles(site, whitelist, collection):
-    # article_urls = get_aricles_urls(site, whitelist)
-    article_urls = get_urls_rss("https://wydarzenia.interia.pl/feed")
+def process_articles(site, whitelist, collection, type = "rss"):
+    if type == "rss":
+            article_urls = get_urls_rss(site)
+    else:
+        article_urls = get_aricles_urls(site, whitelist)
+
 
     existing_urls = collection.distinct("url")
     article_urls = [url for url in article_urls if url not in existing_urls]
@@ -755,14 +758,28 @@ def remove_duplicate_title_date(collection):
     print("============================================\n")
 
 if __name__ == "__main__":
-    articles_data = process_articles(site, whitelist, collection)
-    # print_articles(site, whitelist)
+    interia_rss_channels = [
+        "http://fakty.interia.pl/feed",
+        "https://wydarzenia.interia.pl/feed",
+        "https://fakty.interia.pl/polska/feed",
+        "https://fakty.interia.pl/zagranica/feed",
+        "http://kanaly.rss.interia.pl/biznes.xml",
+        "http://kanaly.rss.interia.pl/podatki.xml",
+        "http://kanaly.rss.interia.pl/finanse.xml"      
+    ]
 
-    # Save to MongoDB
-    if articles_data:
-        collection.insert_many(articles_data)
-        print(f"Saved {len(articles_data)} articles to MongoDB.")
+    for channel in interia_rss_channels:
+        articles_rss = process_articles(channel, whitelist, collection, type="rss")
 
+        # Save to MongoDB
+        if articles_rss:
+            collection.insert_many(articles_rss)
+            print(f"Saved {len(articles_rss)} articles to MongoDB.")
+
+    articles_scraped = process_articles(site, whitelist, collection, type="scrape")
+    if articles_scraped:
+        collection.insert_many(articles_scraped)
+        print(f"Saved {len(articles_scraped)} articles to MongoDB.")
 
     # update_location(collection)
 

@@ -16,24 +16,26 @@ export function handleSearch(searchInput, map) {
         }
       });
   }
-
+  
 export function style_popup(category, source, location, date, article) {
-    const color = categoryColors[category] || "#000000";
-    return `
-        <div class="popup-article">
-            <a href="${article.url}" target="_blank"><h3 class="popup-article-title">${article.title}</h3></a>
-            <div class="popup-article-info">
-                <div class="popup-tags">
-                    <p class="popup-article-category" style="background-color: ${color};">${category}</p>
-                    <p class="popup-article-location">${location}</p>
-                    <p class="popup-article-source">${source}</p>
-                </div>
-                <p class="popup-article-date">${date}</p>
-            </div>
-            <p class = "popup-article-summary">${article.summary}</p>
+  const imageTag = article.image_url ? `<img src="${article.image_url}" alt="obrazek" style="max-width:100%; height:auto; margin-top:5px; border-radius: 10px">` : "";
+
+  return `
+    <div class="popup-article">
+      <a href="${article.url}" target="_blank"><h3 class="popup-article-title">${article.title}</h3></a>
+      <div class="popup-article-info">
+        <div class="popup-tags">
+          <p class="popup-article-category" style="background-color: ${categoryColors[category] || "#000"};">${category}</p>
+          <p class="popup-article-location">${location}</p>
+          <p class="popup-article-source">${source}</p>
         </div>
-    `;
+        <p class="popup-article-date">${date}</p>
+      </div>
+      <p class="popup-article-summary">${article.summary}</p>
+      ${imageTag}
+    </div>`;
 }
+
 
 export function locateUser(map) {
   map.locate({ setView: false, watch: false });
