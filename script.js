@@ -99,11 +99,47 @@ function process_geometry(geometry, category, source, location, article, date, s
         color: color,
         fillColor: color,
         fillOpacity: 0.8,
-        weight: 1
+        weight: 1,
       });
+
       marker.bindPopup(style_popup(category, source, location, date, article));
+
+      let previousCenter = null;
+
+      marker.on('click', function () {
+        if (window.innerWidth < 668) {
+          previousCenter = map.getCenter();
+
+          const latlng = marker.getLatLng();
+          const point = map.latLngToContainerPoint(latlng);
+
+          const offsetPoint = L.point(point.x, point.y - 200);
+          const newLatLng = map.containerPointToLatLng(offsetPoint);
+
+          map.panTo(newLatLng, {
+            animate: true,
+            duration: 0.5
+          });
+        } else {
+          previousCenter = null; 
+        }
+      });
+
+      marker.on('popupclose', function () {
+        if (previousCenter) {
+          map.panTo(previousCenter, {
+            animate: true,
+            duration: 0.5
+          });
+          previousCenter = null;
+        }
+      });
+
+
+
       categoryClusters[category]?.addLayer(marker);
     }
+
   }
 }
 
