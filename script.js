@@ -91,7 +91,7 @@ function process_geometry(geometry, category, source, location, article, date, s
   const color = categoryColors[category] || "#000";
 
   if (geometry.coordinates) {
-    if (geometry.type === "Point" && showPoints) {
+   if (geometry.type === "Point" && showPoints) {
       const [lon, lat] = geometry.coordinates;
       const marker = L.circleMarker([lat, lon], {
         pane: 'points',
@@ -102,40 +102,43 @@ function process_geometry(geometry, category, source, location, article, date, s
         weight: 1,
       });
 
-      marker.bindPopup(style_popup(category, source, location, date, article));
-
       let previousCenter = null;
 
       marker.on('click', function () {
-        if (window.innerWidth < 668) {
-          previousCenter = map.getCenter();
+        previousCenter = map.getCenter();
 
-          const latlng = marker.getLatLng();
-          const point = map.latLngToContainerPoint(latlng);
+        const latlng = marker.getLatLng();
+        const point = map.latLngToContainerPoint(latlng);
+        const offsetPoint = L.point(point.x, point.y - 200);
+        const newLatLng = map.containerPointToLatLng(offsetPoint);
 
-          const offsetPoint = L.point(point.x, point.y - 200);
-          const newLatLng = map.containerPointToLatLng(offsetPoint);
+        map.panTo(newLatLng, {
+          animate: true,
+          duration: 0.5
+        });
 
-          map.panTo(newLatLng, {
-            animate: true,
-            duration: 0.5
+        setTimeout(() => {
+          const popup = L.popup({
+            closeButton: true,
+            autoClose: true,
+            closeOnClick: true,
+            className: 'custom-popup'
+          })
+          .setLatLng(latlng)
+          .setContent(style_popup(category, source, location, date, article))
+          .openOn(map);
+
+          popup.on('remove', function () {
+            if (previousCenter) {
+              map.panTo(previousCenter, {
+                animate: true,
+                duration: 0.3
+              });
+              previousCenter = null;
+            }
           });
-        } else {
-          previousCenter = null; 
-        }
+        }, 300);
       });
-
-      marker.on('popupclose', function () {
-        if (previousCenter) {
-          map.panTo(previousCenter, {
-            animate: true,
-            duration: 0.5
-          });
-          previousCenter = null;
-        }
-      });
-
-
 
       categoryClusters[category]?.addLayer(marker);
     }
