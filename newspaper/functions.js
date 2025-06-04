@@ -18,10 +18,18 @@ export function handleSearch(searchInput, map) {
   }
   
 export function style_popup(category, source, location, date, article) {
-  const imageTag = article.image_url ? `<img src="${article.image_url}" alt="obrazek" style="max-width:100%; height:auto; margin-top:5px; border-radius: 10px">` : "";
+    const articleId = article._id?.$oid;
+    const imageUrl = `newspaper/anime/${articleId}.png`;
+
+    const imageTag = `
+        <img src="${imageUrl}" alt="" 
+            style="max-width:100%; height:auto; margin-top:5px; border-radius: 10px; display:block;"
+            onerror="this.style.display='none';">
+    `;
 
   return `
     <div class="popup-article">
+    
       <a href="${article.url}" target="_blank"><h3 class="popup-article-title">${article.title}</h3></a>
       <div class="popup-article-info">
         <div class="popup-tags">
