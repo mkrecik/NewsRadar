@@ -109,7 +109,7 @@ function process_geometry(geometry, category, source, location, article, date, s
 
         const latlng = marker.getLatLng();
         const point = map.latLngToContainerPoint(latlng);
-        const offsetPoint = L.point(point.x, point.y - 200);
+        const offsetPoint = L.point(point.x, point.y - 230);
         const newLatLng = map.containerPointToLatLng(offsetPoint);
 
         map.panTo(newLatLng, {

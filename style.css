@@ -104,7 +104,7 @@ p.popup-article-source {
     margin: 0;
     padding: 0;
     align-items: center;
-    max-width: 77%;
+    max-width: 90%;
 }
 
 .popup-article-category {
@@ -776,7 +776,7 @@ p.popup-article-summary {
     }
 
     .leaflet-popup-content-wrapper {
-        max-height: 50vh;
+        max-height: 45vh;
         overflow-y: auto;
         overflow-x: hidden;
         z-index: 10000;
