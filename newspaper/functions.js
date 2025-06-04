@@ -19,7 +19,7 @@ export function handleSearch(searchInput, map) {
   
 export function style_popup(category, source, location, date, article) {
     const articleId = article._id?.$oid;
-    const imageUrl = `newspaper/anime/${articleId}.png`;
+    const imageUrl = `static/${articleId}.png`;
 
     const imageTag = `
         <img src="${imageUrl}" alt="" 
