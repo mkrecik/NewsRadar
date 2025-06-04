@@ -13,7 +13,7 @@ function isMobileSafari() {
 const map = L.map('map', {
   closePopupOnClick: isMobileSafari() ? false : true,
    maxZoom: 18,
-}).setView([52.03993467110199, 19.286734471610345], 7);
+}).setView([52.03993467110199, 19.286734471610345], 6);
 
 map.createPane('polygons-country');
 map.getPane('polygons-country').style.zIndex = 300;

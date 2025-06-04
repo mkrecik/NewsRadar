@@ -23,13 +23,13 @@ export function style_popup(category, source, location, date, article) {
 
     const imageTag = `
         <img src="${imageUrl}" alt="" 
-            style="max-width:100%; height:auto; margin-top:5px; border-radius: 10px; display:block;"
-            onerror="this.style.display='none';">
+            style="max-width:100%; height:auto; margin-top:5px; border-radius: 10px; display:none;"
+            onerror="this.style.display='none';"
+            onload="this.style.display='block';">
     `;
 
-  return `
+    return `
     <div class="popup-article">
-    
       <a href="${article.url}" target="_blank"><h3 class="popup-article-title">${article.title}</h3></a>
       <div class="popup-article-info">
         <div class="popup-tags">
@@ -43,6 +43,7 @@ export function style_popup(category, source, location, date, article) {
       ${imageTag}
     </div>`;
 }
+
 
 
 export function locateUser(map) {
