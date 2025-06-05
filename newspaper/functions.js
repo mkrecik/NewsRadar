@@ -19,14 +19,21 @@ export function handleSearch(searchInput, map) {
   
 export function style_popup(category, source, location, date, article) {
     const articleId = article._id?.$oid;
-    const imageUrl = `static/${articleId}.png`;
 
-    const imageTag = `
-        <img src="${imageUrl}" alt="" 
-            style="max-width:100%; height:auto; margin-top:5px; border-radius: 10px; display:none;"
-            onerror="this.style.display='none';"
-            onload="this.style.display='block';">
-    `;
+    let imageTag = '';
+    if (articleId) {
+      const imageUrl = `static/${articleId}.png`;
+      imageTag = `
+        <div style="display:none;" class="popup-image-wrapper">
+          <img src="${imageUrl}" alt="" 
+            style="max-width:100%; height:auto; margin-top:5px; border-radius: 10px;"
+            onerror="this.parentElement.style.display='none';"
+            onload="this.parentElement.style.display='block';">
+          <p class="popup-article-image-caption" style="text-align: end; font-size: 0.8em; font-style:italic; color: #666; margin: 0; margin-top: 2px;">powered by AI</p>    
+        </div>
+      `;
+    }
+
 
     return `
     <div class="popup-article">
@@ -41,6 +48,7 @@ export function style_popup(category, source, location, date, article) {
       </div>
       <p class="popup-article-summary">${article.premium_summary ? article.premium_summary : article.summary}</p>
       ${imageTag}
+      
     </div>`;
 }
 

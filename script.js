@@ -107,9 +107,11 @@ function process_geometry(geometry, category, source, location, article, date, s
       marker.on('click', function () {
         previousCenter = map.getCenter();
 
+        const windowWidth = window.innerWidth;
+        const offsetY = windowWidth <= 668 ? 230 : 100;
         const latlng = marker.getLatLng();
         const point = map.latLngToContainerPoint(latlng);
-        const offsetPoint = L.point(point.x, point.y - 230);
+        const offsetPoint = L.point(point.x, point.y - offsetY);
         const newLatLng = map.containerPointToLatLng(offsetPoint);
 
         map.panTo(newLatLng, {
@@ -468,7 +470,7 @@ function addArticleToSidebar(article) {
         </div>
         <p class="popup-article-date">${article.date ? timeAgo(article.date) : 'brak daty'}</p>
       </div>
-      <p class="popup-article-summary">${article.premium_summary ? article.premium_summary : article.summary}</p>
+      <p class="popup-article-summary">${article.summary}</p>
     </div>`;
   sidebarContent.appendChild(articleDiv);
 }
