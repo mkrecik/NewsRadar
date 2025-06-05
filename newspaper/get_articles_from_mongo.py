@@ -9,7 +9,6 @@ from api import MONGO_URI
 
 # to run server: uvicorn get_articles_from_mongo:app --reload
 # then run frontend
-
 app = FastAPI()
 
 app.add_middleware(

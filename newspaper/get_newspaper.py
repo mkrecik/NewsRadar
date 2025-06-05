@@ -10,8 +10,12 @@ import torch
 import numpy as np
 from openai import OpenAI
 from datetime import datetime, timezone
+import logging
 
 from api import MONGO_URI, OPENROUTER_API_KEY
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 # pip install transformers torch json time requests beautifulsoup4 pymongo python-dateutil spacy newspaper3k lxml[html_clean] protobuf tiktoken
 # python -m spacy download pl_core_news_lg
@@ -164,6 +168,38 @@ def extract_location(text, model = model_gemini):
     except Exception as e:
         print("Błąd w extract_location:", e)
         return "brak"
+
+def generate_premium_summary(url, text, model = model_mistral):
+    try:
+        completion = ai_client.chat.completions.create(
+            model=model,
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        f"Przeczytaj dany artykuł."
+                        f"Na podstawie pełnej treści artykułu wygeneruj krótkie podsumowanie, maksymalnie 30 słów"
+                        f"Podsumowanie nie może zawierać opinii, ma zawierać tylko fakty"
+                        f"Ze względu na prawa autorskie, nie cytuj treści artykułu"
+                        f"Nie zwracaj uwagi na filmiki, których linki podawane są w artykułach. Pomijaj także reklamy, które mogą być pobierane jako treść artykułu.\n\n"
+                    )
+                },
+                {
+                    "role": "user",
+                    "content": text.strip()
+                }
+            ],
+            extra_headers={
+                "HTTP-Referer": "http://localhost",
+                "X-Title": "NewsRadar"
+            }
+        )        
+        return completion.choices[0].message.content.strip()
+
+    except Exception as e:
+        print("Błąd w generate_premium_summary:", e)
+        return "brak"
+    
 
 def get_aricles_urls(site, whitelist):
     article_urls = []
@@ -401,6 +437,9 @@ def process_articles(site, whitelist, collection):
             
             category = extract_category(a.source_url, a.text)
 
+            premium_summary = generate_premium_summary(a.source_url, a.text)
+
+
             # zapisz poligony do osobnej kolekcji
             if (
                 geocode_result.get("geometry_type") in ["Polygon", "MultiPolygon"]
@@ -417,12 +456,14 @@ def process_articles(site, whitelist, collection):
                 "source": a.source_url,
                 "location": location,
                 "summary": summary,
-                "geocode_result": geocode_result
+                "geocode_result": geocode_result,
+                "premium_summary": premium_summary
             }
             articles_data.append(article_data)
 
         except Exception as e:
             print(f"Error processing {article_url}: {e}")
+
 
     return articles_data
 
