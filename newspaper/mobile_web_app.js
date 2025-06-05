@@ -71,11 +71,20 @@ function setupMobileInteractions() {
   let isDragging = false;
 
   sheet.addEventListener('touchstart', (e) => {
-    startY = e.touches[0].clientY;
-    startHeight = sheet.offsetHeight;
-    isDragging = true;
-    sheet.style.transition = 'none'
+    const touchY = e.touches[0].clientY;
+    const rect = sheet.getBoundingClientRect();
+    const touchOffsetY = touchY - rect.top;
+
+    if (touchOffsetY < 60) {
+      startY = touchY;
+      startHeight = sheet.offsetHeight;
+      isDragging = true;
+      sheet.style.transition = 'none';
+    } else {
+      isDragging = false;
+    }
   });
+
 
   sheet.addEventListener('touchmove', (e) => {
     if (!isDragging) return;
