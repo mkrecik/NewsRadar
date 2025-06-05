@@ -316,7 +316,7 @@ def generate_premium_summary(url, text, model = model_mistral):
             ],
             extra_headers={
                 "HTTP-Referer": "https://mkrecik.github.io/WiadoMo/",
-                "X-Title": "WiadoMO"
+                "X-Title": "WiadoMo"
             }
         )        
         return completion.choices[0].message.content.strip()
@@ -462,7 +462,7 @@ def process_articles(site, whitelist, collection, type = "rss"):
             if geocode_result is None:
                 continue
 
-            premium_summary = generate_premium_summary(a.source_url, a.text)
+            premium_summary = generate_premium_summary(a.source_url, a.text, model_gemini)
             
             category = extract_category(a.source_url, a.text)
 

@@ -39,7 +39,7 @@ export function style_popup(category, source, location, date, article) {
         </div>
         <p class="popup-article-date">${date}</p>
       </div>
-      <p class="popup-article-summary">${article.summary}</p>
+      <p class="popup-article-summary">${article.premium_summary ? article.premium_summary : article.summary}</p>
       ${imageTag}
     </div>`;
 }

@@ -468,7 +468,7 @@ function addArticleToSidebar(article) {
         </div>
         <p class="popup-article-date">${article.date ? timeAgo(article.date) : 'brak daty'}</p>
       </div>
-      <p class="popup-article-summary">${article.premium_summary ? '<strong>PODSUMOWANIE</strong>: ' + article.premium_summary : article.summary}</p>
+      <p class="popup-article-summary">${article.premium_summary ? article.premium_summary : article.summary}</p>
     </div>`;
   sidebarContent.appendChild(articleDiv);
 }
