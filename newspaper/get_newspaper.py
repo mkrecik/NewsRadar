@@ -7,11 +7,11 @@ from dateutil.parser import parse as date_parse
 from pymongo import MongoClient
 import numpy as np
 from openai import OpenAI
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import logging
 
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+# logger = logging.getLogger(__name__)
+# logging.basicConfig(level=logging.INFO)
 
 from api import MONGO_URI, OPENROUTER_API_KEY
 
@@ -306,7 +306,8 @@ def generate_premium_summary(url, text, model = model_mistral):
                         f"Na podstawie pełnej treści artykułu wygeneruj krótkie podsumowanie, maksymalnie 30 słów"
                         f"Podsumowanie nie może zawierać opinii, ma zawierać tylko fakty"
                         f"Ze względu na prawa autorskie, nie cytuj treści artykułu"
-                        f"Nie zwracaj uwagi na filmiki, których linki podawane są w artykułach. Pomijaj także reklamy, które mogą być pobierane jako treść artykułu.\n\n"
+                        f"Nie zwracaj uwagi na filmiki, których linki podawane są w artykułach. Pomijaj także reklamy, które mogą być pobierane jako treść artykułu."
+                        f"Jeżeli nie możesz masz dostępu do treści artykułu, lub nie jesteś w stanie wygenerować podsumowania, zwróć jedynie odpowiedź: 'brak'.\n\n"
                     )
                 },
                 {
@@ -463,6 +464,15 @@ def process_articles(site, whitelist, collection, type = "rss"):
                 continue
 
             premium_summary = generate_premium_summary(a.source_url, a.text, model_gemini)
+            is_invalid = (
+                not premium_summary or
+                premium_summary.lower() == "brak" or
+                premium_summary.strip().lower().startswith("ok") or
+                premium_summary.strip().lower().startswith("nie udało się") or
+                premium_summary.strip().lower().startswith("proszę")
+            )
+            if is_invalid:
+                premium_summary = None
             
             category = extract_category(a.source_url, a.text)
 
@@ -733,14 +743,21 @@ def fix_geometry(collection):
         )
         print(f"Zaktualizowano geometry.type dla: {article['title']}")
 
-def update_premium_summary(collection):
-    for article in collection.find():
+def update_premium_summary(collection, model):
+    one_hour_ago = datetime.now(timezone.utc) - timedelta(hours=1)
+
+    for article in collection.find({
+        "$or": [
+            {"save_date": {"$lt": one_hour_ago.isoformat()}},
+            {"save_date": {"$exists": False}}
+        ]
+    }):
         url = article.get("url")
         if not url:
             continue
 
-        if article.get("premium_summary"):
-            continue
+        # if article.get("premium_summary"):
+        #     continue
 
         try:
             a = Article(url, language="pl")
@@ -748,16 +765,33 @@ def update_premium_summary(collection):
             a.parse()
             text = a.text.strip()
 
-            premium_summary = generate_premium_summary(url, text)
+            premium_summary = generate_premium_summary(url, text, model)
+            # summary_mistral = generate_premium_summary(url, text, model_mistral)
 
-            if premium_summary and premium_summary.lower() != "brak":
+            is_invalid = (
+                not premium_summary or
+                premium_summary.lower() == "brak" or
+                premium_summary.strip().lower().startswith("ok") or
+                premium_summary.strip().lower().startswith("nie udało się") or
+                premium_summary.strip().lower().startswith("proszę")
+            )
+
+            if not is_invalid:
+                print(f"Artykuł: {article.get('title', url)}\n")
+                print(f"Podsumowanie premium: {premium_summary}\n")
+                # print(f"Mistral Summary: {summary_mistral}\n\n")
+
                 collection.update_one(
                     {"_id": article["_id"]},
-                    {"$set": {"premium_summary": premium_summary}}
+                    {"$set": {"premium_summary": premium_summary, "save_date": datetime.now(timezone.utc).isoformat()}}
                 )
-                print(f"Zaktualizowano premium_summary dla: {article.get('title', url)}")
+                # print(f"Zaktualizowano premium_summary dla: {article.get('title', url)}")
             else:
-                print(f"Brak sensownego premium_summary dla: {article.get('title', url)}")
+                print(f"Brak podsumowania dla: {article.get('title', url)}")
+                collection.update_one(
+                    {"_id": article["_id"]},
+                    {"$set": {"premium_summary": None, "save_date": datetime.now(timezone.utc).isoformat()}}
+                )
 
         except Exception as e:
             print(f"Błąd podczas aktualizacji premium_summary dla: {url}\n{e}")
@@ -828,30 +862,30 @@ def remove_duplicate_title_date(collection):
 
 
 if __name__ == "__main__":
-    # interia_rss_channels = [
-    #     "http://fakty.interia.pl/feed",
-    #     "https://wydarzenia.interia.pl/feed",
-    #     "https://fakty.interia.pl/polska/feed",
-    #     "https://fakty.interia.pl/zagranica/feed",
-    #     "http://kanaly.rss.interia.pl/biznes.xml",
-    #     "http://kanaly.rss.interia.pl/podatki.xml",
-    #     "http://kanaly.rss.interia.pl/finanse.xml"      
-    # ]
+    interia_rss_channels = [
+        "http://fakty.interia.pl/feed",
+        "https://wydarzenia.interia.pl/feed",
+        "https://fakty.interia.pl/polska/feed",
+        "https://fakty.interia.pl/zagranica/feed",
+        "http://kanaly.rss.interia.pl/biznes.xml",
+        "http://kanaly.rss.interia.pl/podatki.xml",
+        "http://kanaly.rss.interia.pl/finanse.xml"      
+    ]
 
-    # for channel in interia_rss_channels:
-    #     articles_rss = process_articles(channel, whitelist, collection, type="rss")
+    for channel in interia_rss_channels:
+        articles_rss = process_articles(channel, whitelist, collection, type="rss")
 
-    #     # Save to MongoDB
-    #     if articles_rss:
-    #         collection.insert_many(articles_rss)
-    #         print(f"Saved {len(articles_rss)} articles to MongoDB.")
+        # Save to MongoDB
+        if articles_rss:
+            collection.insert_many(articles_rss)
+            print(f"Saved {len(articles_rss)} articles to MongoDB.")
 
-    # articles_scraped = process_articles(site, whitelist, collection, type="scrape")
-    # if articles_scraped:
-    #     collection.insert_many(articles_scraped)
-    #     print(f"Saved {len(articles_scraped)} articles to MongoDB.")
+    articles_scraped = process_articles(site, whitelist, collection, type="scrape")
+    if articles_scraped:
+        collection.insert_many(articles_scraped)
+        print(f"Saved {len(articles_scraped)} articles to MongoDB.")
 
-    update_premium_summary(collection)
+    # update_premium_summary(collection, model_gemini)
 
     # update_location(collection)
 
