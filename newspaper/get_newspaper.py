@@ -8,6 +8,10 @@ from pymongo import MongoClient
 import numpy as np
 from openai import OpenAI
 from datetime import datetime, timezone
+import logging
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 from api import MONGO_URI, OPENROUTER_API_KEY
 
@@ -290,6 +294,38 @@ def geocode(query):
 
     return result
 
+def generate_premium_summary(url, text, model = model_mistral):
+    try:
+        completion = ai_client.chat.completions.create(
+            model=model,
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        f"Przeczytaj dany artykuł."
+                        f"Na podstawie pełnej treści artykułu wygeneruj krótkie podsumowanie, maksymalnie 30 słów"
+                        f"Podsumowanie nie może zawierać opinii, ma zawierać tylko fakty"
+                        f"Ze względu na prawa autorskie, nie cytuj treści artykułu"
+                        f"Nie zwracaj uwagi na filmiki, których linki podawane są w artykułach. Pomijaj także reklamy, które mogą być pobierane jako treść artykułu.\n\n"
+                    )
+                },
+                {
+                    "role": "user",
+                    "content": text.strip()
+                }
+            ],
+            extra_headers={
+                "HTTP-Referer": "https://mkrecik.github.io/WiadoMo/",
+                "X-Title": "WiadoMO"
+            }
+        )        
+        return completion.choices[0].message.content.strip()
+
+    except Exception as e:
+        print("Błąd w generate_premium_summary:", e)
+        return "brak"
+    
+
 def remove_polygon_geometries(collection):
     result = collection.update_many(
         { "geocode_result.geometry.type": { "$in": ["Polygon", "MultiPolygon"] } },
@@ -425,6 +461,8 @@ def process_articles(site, whitelist, collection, type = "rss"):
             geocode_result = geocode(location)
             if geocode_result is None:
                 continue
+
+            premium_summary = generate_premium_summary(a.source_url, a.text)
             
             category = extract_category(a.source_url, a.text)
 
@@ -447,6 +485,7 @@ def process_articles(site, whitelist, collection, type = "rss"):
                 "source": a.source_url,
                 "location": location,
                 "summary": summary,
+                "premium_summary": premium_summary,
                 "save_date": datetime.now(timezone.utc).isoformat(),
                 "geocode_result": geocode_result,
             }
@@ -694,6 +733,36 @@ def fix_geometry(collection):
         )
         print(f"Zaktualizowano geometry.type dla: {article['title']}")
 
+def update_premium_summary(collection):
+    for article in collection.find():
+        url = article.get("url")
+        if not url:
+            continue
+
+        if article.get("premium_summary"):
+            continue
+
+        try:
+            a = Article(url, language="pl")
+            a.download()
+            a.parse()
+            text = a.text.strip()
+
+            premium_summary = generate_premium_summary(url, text)
+
+            if premium_summary and premium_summary.lower() != "brak":
+                collection.update_one(
+                    {"_id": article["_id"]},
+                    {"$set": {"premium_summary": premium_summary}}
+                )
+                print(f"Zaktualizowano premium_summary dla: {article.get('title', url)}")
+            else:
+                print(f"Brak sensownego premium_summary dla: {article.get('title', url)}")
+
+        except Exception as e:
+            print(f"Błąd podczas aktualizacji premium_summary dla: {url}\n{e}")
+
+
 def restore_geometry_type_from_polygons(article_collection, polygon_collection):
     polygons = polygon_collection.find()
 
@@ -757,29 +826,32 @@ def remove_duplicate_title_date(collection):
     print(f"Total duplicates removed: {removed_count}")
     print("============================================\n")
 
+
 if __name__ == "__main__":
-    interia_rss_channels = [
-        "http://fakty.interia.pl/feed",
-        "https://wydarzenia.interia.pl/feed",
-        "https://fakty.interia.pl/polska/feed",
-        "https://fakty.interia.pl/zagranica/feed",
-        "http://kanaly.rss.interia.pl/biznes.xml",
-        "http://kanaly.rss.interia.pl/podatki.xml",
-        "http://kanaly.rss.interia.pl/finanse.xml"      
-    ]
+    # interia_rss_channels = [
+    #     "http://fakty.interia.pl/feed",
+    #     "https://wydarzenia.interia.pl/feed",
+    #     "https://fakty.interia.pl/polska/feed",
+    #     "https://fakty.interia.pl/zagranica/feed",
+    #     "http://kanaly.rss.interia.pl/biznes.xml",
+    #     "http://kanaly.rss.interia.pl/podatki.xml",
+    #     "http://kanaly.rss.interia.pl/finanse.xml"      
+    # ]
 
-    for channel in interia_rss_channels:
-        articles_rss = process_articles(channel, whitelist, collection, type="rss")
+    # for channel in interia_rss_channels:
+    #     articles_rss = process_articles(channel, whitelist, collection, type="rss")
 
-        # Save to MongoDB
-        if articles_rss:
-            collection.insert_many(articles_rss)
-            print(f"Saved {len(articles_rss)} articles to MongoDB.")
+    #     # Save to MongoDB
+    #     if articles_rss:
+    #         collection.insert_many(articles_rss)
+    #         print(f"Saved {len(articles_rss)} articles to MongoDB.")
 
-    articles_scraped = process_articles(site, whitelist, collection, type="scrape")
-    if articles_scraped:
-        collection.insert_many(articles_scraped)
-        print(f"Saved {len(articles_scraped)} articles to MongoDB.")
+    # articles_scraped = process_articles(site, whitelist, collection, type="scrape")
+    # if articles_scraped:
+    #     collection.insert_many(articles_scraped)
+    #     print(f"Saved {len(articles_scraped)} articles to MongoDB.")
+
+    update_premium_summary(collection)
 
     # update_location(collection)
 
